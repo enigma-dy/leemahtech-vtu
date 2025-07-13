@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -54,5 +55,17 @@ export class UserService {
     } catch (error) {
       throw new InternalServerErrorException('Failed to create user');
     }
+  }
+
+  async getUser(email: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { email: email },
+      include: { account: true },
+    });
+    if (!user) {
+      throw new BadRequestException();
+    }
+    const { password, ...userData } = user;
+    return userData;
   }
 }
