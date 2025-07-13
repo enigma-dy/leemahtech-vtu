@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Req } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Public } from 'src/decorators/auth.decorator';
 import { request } from 'http';
 
@@ -19,5 +19,12 @@ export class UserController {
     const { email } = request['user'];
 
     return this.userService.getUser(email);
+  }
+
+  @Put('update')
+  async updateUser(@Req() request: Request, @Body() data: UpdateUserDto) {
+    const { email } = request['user'];
+
+    return this.userService.updateUser(email, data);
   }
 }

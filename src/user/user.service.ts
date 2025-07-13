@@ -3,10 +3,11 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/db/prisma.service';
-import { CreateUserDto } from './dto/user.dto';
+import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { User } from 'generated/prisma';
 
 @Injectable()
@@ -63,9 +64,26 @@ export class UserService {
       include: { account: true },
     });
     if (!user) {
-      throw new BadRequestException();
+      throw new NotFoundException();
     }
     const { password, ...userData } = user;
+    return userData;
+  }
+
+  async updateUser(email: string, data: UpdateUserDto) {
+    const user = await this.prisma.user.findFirst({ where: { email: email } });
+
+    if (!user) {
+      throw new NotFoundException();
+    }
+
+    const updateUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: data,
+      include: { account: true },
+    });
+
+    const { password, ...userData } = updateUser;
     return userData;
   }
 }

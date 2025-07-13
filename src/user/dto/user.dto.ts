@@ -22,3 +22,20 @@ export class CreateUserDto {
   @IsString()
   address: string;
 }
+
+export class UpdateUserDto {
+  @IsString()
+  fullName: string;
+
+  @IsString()
+  username: string;
+
+  @IsString()
+  password: string;
+
+  @IsString()
+  phone: string;
+
+  @IsString()
+  address: string;
+}
