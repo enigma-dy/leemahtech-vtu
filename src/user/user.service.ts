@@ -1,0 +1,55 @@
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from 'src/db/prisma.service';
+import { CreateUserDto } from './dto/user.dto';
+import { User } from 'generated/prisma';
+
+@Injectable()
+export class UserService {
+  constructor(private prisma: PrismaService) {}
+
+  async createUser(data: CreateUserDto): Promise<User> {
+    const { passwordConfirm, password, ...userData } = data;
+
+    if (password !== passwordConfirm) {
+      throw new ConflictException('Password and confirmation do not match');
+    }
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ username: userData.username }, { email: userData.email }],
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Username or email already in use');
+    }
+
+    try {
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      return await this.prisma.$transaction(async (prisma) => {
+        const account = await prisma.account.create({
+          data: {
+            name: `${userData.fullName.trim()} VTU ${Math.random().toString(36).substring(2, 8)}`,
+          },
+        });
+
+        return prisma.user.create({
+          data: {
+            ...userData,
+            password: hashedPassword,
+            accountId: account.id,
+          },
+        });
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to create user');
+    }
+  }
+}
