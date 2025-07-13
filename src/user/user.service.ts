@@ -12,7 +12,7 @@ import { User } from 'generated/prisma';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async createUser(data: CreateUserDto): Promise<User> {
+  async createUser(data: CreateUserDto): Promise<Omit<User, 'password'>> {
     const { passwordConfirm, password, ...userData } = data;
 
     if (password !== passwordConfirm) {
@@ -40,13 +40,16 @@ export class UserService {
           },
         });
 
-        return prisma.user.create({
+        const user = await prisma.user.create({
           data: {
             ...userData,
             password: hashedPassword,
             accountId: account.id,
           },
         });
+        const { password: _, ...data } = user;
+
+        return data;
       });
     } catch (error) {
       throw new InternalServerErrorException('Failed to create user');
