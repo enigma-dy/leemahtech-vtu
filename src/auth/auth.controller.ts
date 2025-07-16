@@ -7,11 +7,13 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.services';
 import { LoginDto } from './dto/auth.dto';
+import { Public } from 'src/decorators/auth.decorator';
 
 @Controller()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
     try {

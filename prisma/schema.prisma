@@ -54,7 +54,27 @@ model Entry {
   createdAt DateTime @default(now())
 }
 
+
+model DataPrice {
+  id               String  @id @default(uuid())
+  network_id       String
+  network_name     String   
+  plan_size        String
+  plan_volume      String
+  plan_name_id     String
+  plan_name_id2    String
+  Affilliate_price Decimal
+  TopUser_price    Decimal
+  api_price        Decimal
+  plan_type        String
+  validity         String
+  commission       Decimal
+  
+  @@unique([network_id, plan_name_id], name: "network_id_plan_name_id")
+}
+
 enum EntryType{
   DEBIT
   CREDIT
 }
+
