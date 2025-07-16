@@ -36,6 +36,26 @@ export class DataStationController {
     }
   }
 
+  @Get('me')
+  async getMyDataStationDetails() {
+    try {
+      const data = await this.DataStationService.getMyDataStationDetails();
+      return {
+        status: 'success',
+        data,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          status: 'error',
+          message:
+            error?.response?.data?.message || 'Failed to fetch data pricing',
+        },
+        error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Post('buy')
   async buyDataPlan(
     @Body() data: DataStationDto,
