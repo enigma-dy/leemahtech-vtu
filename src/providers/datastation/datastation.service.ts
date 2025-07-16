@@ -1,7 +1,8 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Body, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { DataStationDto } from './dto/datastation.dto';
 
 @Injectable()
 export class DataStationService {
@@ -23,6 +24,29 @@ export class DataStationService {
         'Error fetching data from DataStation';
       const status = error?.response?.status || 500;
       throw new InternalServerErrorException({ status, message });
+    }
+  }
+
+  async buyData(data: DataStationDto): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post('https://datastationapi.com/api/data/', data, {
+          headers: {
+            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+          },
+        }),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
     }
   }
 }

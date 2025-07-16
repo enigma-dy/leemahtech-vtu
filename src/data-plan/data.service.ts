@@ -102,4 +102,6 @@ export class DataService {
       },
     });
   }
+
+  async buyDataPlan() {}
 }
