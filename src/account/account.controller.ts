@@ -4,7 +4,7 @@ import { AccountService } from './account.service';
 import { Decimal } from 'generated/prisma/runtime/library';
 import { AccountDto } from './dto/account.dto';
 
-@Controller()
+@Controller('account')
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
@@ -29,5 +29,10 @@ export class AccountController {
   async getBalance(@Req() request: Request) {
     const { sub } = request['user'];
     return await this.accountService.getBalance(sub);
+  }
+
+  @Get('provider-balance')
+  async getPoviderBalance() {
+    return this.accountService.getProviderBalance();
   }
 }

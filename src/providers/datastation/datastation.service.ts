@@ -1,8 +1,14 @@
 import { HttpService } from '@nestjs/axios';
 import { Body, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { DataStationDto } from './dto/datastation.dto';
+import {
+  AirTime2CastDto,
+  AirtimePurchaseDto,
+  CardPurchaseDto,
+  DataStationDto,
+  ElectricityPaymentDto,
+  ExamPinPurchaseDto,
+} from './dto/datastation.dto';
 
 @Injectable()
 export class DataStationService {
@@ -11,13 +17,47 @@ export class DataStationService {
   async getMyDataStationDetails(): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/get/network/', {
+        this.httpService.get('https://datastationapi.com/api/user/', {
           headers: {
             Authorization: `Token ${process.env.DataStation_API_KEY}`,
           },
         }),
       );
-      return response.data;
+      const {
+        user,
+        notification,
+        percentage,
+        topuppercentage,
+        Admin_number,
+        Exam,
+        banks,
+        banners,
+        Dataplans,
+        Cableplan,
+        support_phone_number,
+        recharge,
+      } = response.data;
+
+      const {
+        id,
+        email,
+        FullName,
+        Phone,
+        Account_Balance,
+        wallet_balance,
+        bonus_balance,
+      } = user;
+      const acct_bal = user.bank_accounts;
+      return {
+        id,
+        email,
+        FullName,
+        Phone,
+        Account_Balance,
+        wallet_balance,
+        bonus_balance,
+        acct_bal,
+      };
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -92,7 +132,105 @@ export class DataStationService {
     }
   }
 
-  async queryDataTransaction(): Promise<any> {
+  async queryDataTransaction(id: string): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`https://datastationapi.com/api/data/${id}`, {
+          headers: {
+            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+          },
+        }),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async queryBillPayment(id: string): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `https://datastationapi.com/api/billpayment/${id}`,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
+          },
+        ),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async queryCableSub(id: string): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`https://datastationapi.com/api/cablesub/${id}`, {
+          headers: {
+            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+          },
+        }),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async validateIUC(id: string, iuc: string): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `https://datastationapi.com/api/validateiuc?smart_card_number=${iuc}& &cablename=${id}`,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
+          },
+        ),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async validateMeter(id: string): Promise<any> {
     try {
       const response = await firstValueFrom(
         this.httpService.get('https://datastationapi.com/api/data/', {
@@ -115,10 +253,64 @@ export class DataStationService {
     }
   }
 
-  async queryBillPayment(): Promise<any> {
+  async airtimeToCash(data: AirTime2CastDto): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
+        this.httpService.post(
+          'https://datastationapi.com/api/Airtime_funding',
+          data,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
+          },
+        ),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async electricityBillPayment(data: ElectricityPaymentDto): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          'https://datastationapi.com/api/cablesub/',
+          data,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
+          },
+        ),
+      );
+      console.log('Response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('DataStation API Error:', {
+        message: error?.message,
+        responseData: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack,
+      });
+
+      throw error;
+    }
+  }
+
+  async buyResultCheckerPin(data: ExamPinPurchaseDto): Promise<any> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post('https://datastationapi.com/api/epin/', data, {
           headers: {
             Authorization: `Token ${process.env.DataStation_API_KEY}`,
           },
@@ -138,14 +330,18 @@ export class DataStationService {
     }
   }
 
-  async queryCableSub(): Promise<any> {
+  async generateRechargePin(data: CardPurchaseDto): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+        this.httpService.post(
+          'https://datastationapi.com/api/rechargepin',
+          data,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
           },
-        }),
+        ),
       );
       console.log('Response:', response.data);
       return response.data;
@@ -161,125 +357,10 @@ export class DataStationService {
     }
   }
 
-  async validateIUC(): Promise<any> {
+  async buyAirtime(data: AirtimePurchaseDto): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async validateMeter(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async airtimeToCash(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async electricityBillPayment(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async buyResultCheckerPin(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async generateRechargePin(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/data/', {
+        this.httpService.post('https://datastationapi.com/api/topup', data, {
           headers: {
             Authorization: `Token ${process.env.DataStation_API_KEY}`,
           },

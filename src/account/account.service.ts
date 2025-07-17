@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Decimal } from 'generated/prisma/runtime/library';
 import { PrismaService } from 'src/db/prisma.service';
+import { DataStationService } from 'src/providers/datastation/datastation.service';
+import { HusmodService } from 'src/providers/husmod/husmod.service';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dataStationService: DataStationService,
+    private readonly husmodSevice: HusmodService,
+  ) {}
 
   async creditAccount(userId: string, amount: Decimal) {
     const user = await this.prisma.user.findUnique({
@@ -90,5 +96,14 @@ export class AccountService {
       throw new NotFoundException('User not Found');
     }
     return user.account.balance;
+  }
+
+  async getProviderBalance() {
+    const dataStationBal =
+      await this.dataStationService.getMyDataStationDetails();
+
+    const husmodBal = await this.husmodSevice.getMyHusmodDetails();
+
+    return { dataStationBal, husmodBal };
   }
 }
