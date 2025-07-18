@@ -78,3 +78,13 @@ enum EntryType{
   CREDIT
 }
 
+enum SmeProvider {
+  datastation
+  husmodata
+  direct
+}
+
+model ProviderSetting {
+  id             Int      @id @default(1)
+  activeProvider SmeProvider
+}

@@ -1,15 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Body, HttpStatus, Injectable, Req, Res } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
 import { LeemahService } from 'src/providers/leemah/leemah.service';
 import { Prisma } from '@prisma/client';
+import { Response, Request } from 'express';
 import { Decimal } from 'generated/prisma/runtime/library';
 import { CreateOrUpdateDataPriceDto } from './dto/data.dto';
+import { HusmodService } from 'src/providers/husmod/husmod.service';
+import { DataStationService } from 'src/providers/datastation/datastation.service';
+import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
+import { ProviderSettingService } from 'src/providers/provider.service';
+import { SmeProvider } from 'generated/prisma';
 
 @Injectable()
 export class DataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leemahService: LeemahService,
+    private readonly husmodService: HusmodService,
+    private readonly dataStationService: DataStationService,
+    private readonly activeProvider: ProviderSettingService,
   ) {}
 
   async initailDataPrice() {
@@ -103,5 +112,25 @@ export class DataService {
     });
   }
 
-  async buyDataPlan() {}
+  async buyData(data: DataStationDto): Promise<any> {
+    const active = await this.activeProvider.getActiveProvider();
+
+    console.log(active);
+
+    switch (active) {
+      case SmeProvider.datastation:
+        console.log('buying from datastation');
+        return this.dataStationService.buyData(data);
+
+      case SmeProvider.husmodata:
+        console.log('buying from husmod');
+        return this.husmodService.buyData(data);
+
+      // case SmeProvider.direct:
+      //   return this.directService.buyData(data);
+
+      default:
+        throw new Error(`Unsupported provider: ${active}`);
+    }
+  }
 }

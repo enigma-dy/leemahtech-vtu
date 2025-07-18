@@ -11,6 +11,7 @@ import { LeemahModule } from './providers/leemah/leemah.module';
 import { DataStationModule } from './providers/datastation/datastation.module';
 import { HusmodModule } from './providers/husmod/husmod.module';
 import { DataModule } from './data-plan/data.module';
+import { SmeProviderModule } from './providers/provider.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DataModule } from './data-plan/data.module';
     DataStationModule,
     HusmodModule,
     DataModule,
+    SmeProviderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
