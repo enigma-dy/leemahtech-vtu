@@ -16,14 +16,14 @@ model User {
   password  String
   phone     String
   address   String
-  accountId String   @unique
+  walletId String   @unique
 
-  account   Account  @relation(fields: [accountId], references: [id])
+  wallet   Wallet  @relation(fields: [walletId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Account {
+model Wallet {
   id        String    @id @default(uuid())
   name      String
   balance   Decimal   @default(0) @db.Decimal(20, 4)
@@ -45,8 +45,8 @@ model Ledger {
 
 model Entry {
   id        String   @id @default(uuid())
-  accountId String
-  account   Account  @relation(fields: [accountId], references: [id])
+  walletId String
+  wallet   Wallet  @relation(fields: [walletId], references: [id])
   ledgerId  String
   ledger    Ledger   @relation(fields: [ledgerId], references: [id])
   amount    Decimal
