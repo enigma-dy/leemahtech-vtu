@@ -1,65 +1,83 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import * as qs from 'qs';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as Flutterwave from 'flutterwave-node-v3';
 
-// @Injectable()
-// export class FlutterwaveAuthService implements OnModuleInit {
-//   private accessToken: string | null = null;
-//   private expiresIn = 0;
-//   private lastTokenRefreshTime = 0;
+@Injectable()
+export class FlutterwaveService implements OnModuleInit {
+  private flw: any;
+  private readonly logger = new Logger(FlutterwaveService.name);
+  private enckey: string;
 
-//   constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly configService: ConfigService) {}
 
-//   async onModuleInit() {
-//     setInterval(() => this.ensureTokenIsValid(), 5000);
-//   }
+  onModuleInit() {
+    const publicKey = this.configService.get<string>('FLUTTER_PUBLIC_KEY');
+    const secretKey = this.configService.get<string>('FLUTTER_SECRET_KEY');
+    const encryptionKey = this.configService.get<string>(
+      'FLUTTER_ENCRYPTION_KEY',
+    );
 
-//   private async refreshToken(): Promise<void> {
-//     try {
-//       const response = await firstValueFrom(
-//         this.httpService.post(
-//           process.env.FLUTTER_AUTH_URL as string,
-//           qs.stringify({
-//             client_id: process.env.FLUTTER_CLIENT_ID,
-//             client_secret: process.env.CLIENT_SECRET,
-//             grant_type: process.env.GRANT_TYPE,
-//           }),
-//           {
-//             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-//           },
-//         ),
-//       );
+    if (!publicKey || !secretKey || !encryptionKey) {
+      this.logger.error('Missing Flutterwave API credentials');
+      throw new Error('Flutterwave API keys are not set');
+    }
 
-//       this.accessToken = response.data.access_token;
-//       this.expiresIn = response.data.expires_in;
-//       this.lastTokenRefreshTime = Date.now();
+    this.flw = new Flutterwave(publicKey, secretKey);
+    this.enckey = encryptionKey;
+  }
 
-//       console.log('New token fetched.');
-//     } catch (error: any) {
-//       console.error(
-//         'Error refreshing token:',
-//         error.response?.data || error.message,
-//       );
-//     }
-//   }
+  async chargeCard(payload: any): Promise<any> {
+    try {
+      const cardPayload = { ...payload, enckey: this.enckey };
+      return await this.flw.Charge.card(payload);
+    } catch (error) {
+      this.logger.error(`Card charge failed: ${error.message}`);
+      throw error;
+    }
+  }
 
-//   private async ensureTokenIsValid(): Promise<void> {
-//     const currentTime = Date.now();
-//     const timeSinceLastRefresh =
-//       (currentTime - this.lastTokenRefreshTime) / 1000;
-//     const timeLeft = this.expiresIn - timeSinceLastRefresh;
+  async initiateBankTransfer(payload: any): Promise<any> {
+    try {
+      return await this.flw.Charge.bank_transfer(payload);
+    } catch (error) {
+      this.logger.error(`Bank transfer initiation failed: ${error.message}`);
+      throw error;
+    }
+  }
 
-//     if (!this.accessToken || timeLeft < 60) {
-//       console.log('Refreshing Flutterwave token...');
-//       await this.refreshToken();
-//     } else {
-//       console.log(`Token still valid for ${Math.floor(timeLeft)} seconds.`);
-//     }
-//   }
+  async chargeNigeriaAccount(payload: any): Promise<any> {
+    try {
+      return await this.flw.Charge.ng_account(payload);
+    } catch (error) {
+      this.logger.error(`Nigeria Direct Debit failed: ${error.message}`);
+      throw error;
+    }
+  }
 
-//   public async getAccessToken(): Promise<string> {
-//     await this.ensureTokenIsValid();
-//     return this.accessToken!;
-//   }
-// }
+  async chargeUSSD(payload: any): Promise<any> {
+    try {
+      return await this.flw.Charge.ussd(payload);
+    } catch (error) {
+      this.logger.error(`USSD payment failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async chargeENaira(payload: any): Promise<any> {
+    try {
+      return await this.flw.Charge.enaira(payload);
+    } catch (error) {
+      this.logger.error(`eNaira payment failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async verifyTransaction(id: string): Promise<any> {
+    try {
+      return await this.flw.Transaction.verify({ id });
+    } catch (error) {
+      this.logger.error(`Transaction verification failed: ${error.message}`);
+      throw error;
+    }
+  }
+}

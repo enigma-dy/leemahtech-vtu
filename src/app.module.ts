@@ -5,14 +5,14 @@ import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './user/user.module';
 import { PrismaModule } from './db/prisma.module';
 import { AuthModule } from './auth/auth.module';
-
-// import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
 import { LeemahModule } from './providers/leemah/leemah.module';
 import { DataStationModule } from './providers/datastation/datastation.module';
 import { HusmodModule } from './providers/husmod/husmod.module';
 import { DataModule } from './data-plan/data.module';
 import { SmeProviderModule } from './providers/provider.module';
 import { WalletModule } from './wallet/wallet.module';
+import { OpayModule } from './payment-gateway/opay/opay.module';
+import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
 
 @Module({
   imports: [
@@ -21,12 +21,13 @@ import { WalletModule } from './wallet/wallet.module';
     UserModule,
     AuthModule,
     WalletModule,
-    // FlutterwaveModule,
+    FlutterwaveModule,
     LeemahModule,
     DataStationModule,
     HusmodModule,
     DataModule,
     SmeProviderModule,
+    OpayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsNumber,
@@ -9,6 +10,7 @@ import {
   Min,
   IsOptional,
   IsPositive,
+  ValidateNested,
 } from 'class-validator';
 
 export class Amount {
@@ -57,6 +59,8 @@ export class OpayPaymentRequest {
   @IsString()
   country: string;
 
+  @ValidateNested()
+  @Type(() => Amount)
   amount: Amount;
 
   @IsUrl()
@@ -74,14 +78,6 @@ export class OpayPaymentRequest {
   @IsOptional()
   displayName?: string;
 
-  @IsIP()
-  @IsOptional()
-  userClientIP?: string;
-
-  @IsString()
-  @IsOptional()
-  sn?: string;
-
   @IsNumber()
   @Min(1)
   @IsOptional()
@@ -92,13 +88,13 @@ export class OpayPaymentRequest {
   payMethod?: string;
 
   @IsOptional()
+  @ValidateNested()
+  @Type(() => UserInfo)
   userInfo?: UserInfo;
 
+  @ValidateNested()
+  @Type(() => Product)
   product: Product;
-
-  @IsBoolean()
-  @IsOptional()
-  evokeOpay?: boolean;
 
   @IsString()
   @IsOptional()

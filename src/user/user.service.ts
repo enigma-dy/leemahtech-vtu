@@ -36,7 +36,7 @@ export class UserService {
       const hashedPassword = await bcrypt.hash(password, salt);
 
       return await this.prisma.$transaction(async (prisma) => {
-        const account = await prisma.account.create({
+        const account = await prisma.wallet.create({
           data: {
             name: `${userData.fullName.trim()} VTU ${Math.random().toString(36).substring(2, 8)}`,
           },
@@ -46,7 +46,7 @@ export class UserService {
           data: {
             ...userData,
             password: hashedPassword,
-            accountId: account.id,
+            walletId: account.id,
           },
         });
         const { password: _, ...data } = user;
@@ -61,7 +61,7 @@ export class UserService {
   async getUser(email: string) {
     const user = await this.prisma.user.findFirst({
       where: { email: email },
-      include: { account: true },
+      include: { wallet: true },
     });
     if (!user) {
       throw new NotFoundException();
@@ -80,7 +80,7 @@ export class UserService {
     const updateUser = await this.prisma.user.update({
       where: { id: user.id },
       data: data,
-      include: { account: true },
+      include: { wallet: true },
     });
 
     const { password, ...userData } = updateUser;

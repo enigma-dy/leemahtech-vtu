@@ -30,17 +30,13 @@ export class OpayService {
       }
 
       const response = await firstValueFrom(
-        this.httpService.post(
-          process.env.OPAY_PAYMENT_URL,
-          qs.stringify(data),
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.OPAY_PUBLIC_KEY}`,
-              MerchantId: process.env.OPAY_MERCHANT_ID,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
+        this.httpService.post(process.env.OPAY_PAYMENT_URL, data, {
+          headers: {
+            Authorization: `Bearer ${process.env.OPAY_PUBLIC_KEY}`,
+            MerchantId: process.env.OPAY_MERCHANT_ID,
+            'Content-Type': 'application/json',
           },
-        ),
+        }),
       );
 
       return response.data;
