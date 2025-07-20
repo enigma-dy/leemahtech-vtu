@@ -1,21 +1,38 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
+import { v4 as uuidv4 } from 'uuid';
 
 import { Decimal } from 'generated/prisma/runtime/library';
 import { WalletDto } from './dto/wallet.dto';
 import { WalletService } from './wallet.service';
+import { FlutterwaveService } from 'src/payment-gateway/flutter/flutter.service';
 
-@Controller('account')
+@Controller('wallet')
 export class WalletController {
-  constructor(private readonly accountService: WalletService) {}
+  constructor(
+    private readonly accountService: WalletService,
+    private readonly flutterwaveService: FlutterwaveService,
+  ) {}
 
   @Post('credit')
   async creditAccount(@Body() data: WalletDto, @Req() request: Request) {
     const { sub } = request['user'];
 
+    const tx_ref = `tx-${uuidv4()}`;
+    const redirect_url = 'https://your-frontend-app.com/payment-complete';
+
+    const paymentPayload = {
+      ...data,
+      tx_ref,
+      redirect_url,
+      customer: {
+        email: 'user@example.com',
+      },
+    };
+
     const amount = data.amount;
 
-    return await this.accountService.creditWallet(sub, new Decimal(amount));
+    return await this.flutterwaveService.initiatePayment(paymentPayload, sub);
   }
 
   @Post('debit')

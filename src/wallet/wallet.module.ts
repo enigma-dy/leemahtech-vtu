@@ -1,12 +1,17 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 
 import { DataStationModule } from 'src/providers/datastation/datastation.module';
 import { HusmodModule } from 'src/providers/husmod/husmod.module';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
+import { FlutterwaveModule } from 'src/payment-gateway/flutter/flutter.module';
 
 @Module({
-  imports: [DataStationModule, HusmodModule],
+  imports: [
+    DataStationModule,
+    HusmodModule,
+    forwardRef(() => FlutterwaveModule),
+  ],
   providers: [WalletService],
   controllers: [WalletController],
   exports: [WalletService],

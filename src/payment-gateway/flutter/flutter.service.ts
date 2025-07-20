@@ -1,83 +1,88 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
+
 import { ConfigService } from '@nestjs/config';
-import * as Flutterwave from 'flutterwave-node-v3';
+import axios from 'axios';
+import { Decimal } from 'generated/prisma/runtime/library';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
-export class FlutterwaveService implements OnModuleInit {
-  private flw: any;
+export class FlutterwaveService {
   private readonly logger = new Logger(FlutterwaveService.name);
-  private enckey: string;
+  private readonly baseUrl = 'https://api.flutterwave.com/v3';
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly walletService: WalletService,
+  ) {}
 
-  onModuleInit() {
-    const publicKey = this.configService.get<string>('FLUTTER_PUBLIC_KEY');
-    const secretKey = this.configService.get<string>('FLUTTER_SECRET_KEY');
-    const encryptionKey = this.configService.get<string>(
-      'FLUTTER_ENCRYPTION_KEY',
-    );
-
-    if (!publicKey || !secretKey || !encryptionKey) {
-      this.logger.error('Missing Flutterwave API credentials');
-      throw new Error('Flutterwave API keys are not set');
-    }
-
-    this.flw = new Flutterwave(publicKey, secretKey);
-    this.enckey = encryptionKey;
-  }
-
-  async chargeCard(payload: any): Promise<any> {
+  async initiatePayment(paymentData: any, userId: string): Promise<any> {
     try {
-      const cardPayload = { ...payload, enckey: this.enckey };
-      return await this.flw.Charge.card(payload);
+      const payload = {
+        ...paymentData,
+        meta: {
+          userId,
+          type: 'wallet_fuding',
+        },
+      };
+      const secretKey = this.configService.get<string>('FLUTTER_SECRET_KEY');
+
+      const response = await axios.post(`${this.baseUrl}/payments`, payload, {
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+      });
+
+      return response.data;
     } catch (error) {
-      this.logger.error(`Card charge failed: ${error.message}`);
+      this.logger.error(
+        'Payment initiation failed',
+        error?.response?.data || error.message,
+      );
       throw error;
     }
   }
 
-  async initiateBankTransfer(payload: any): Promise<any> {
-    try {
-      return await this.flw.Charge.bank_transfer(payload);
-    } catch (error) {
-      this.logger.error(`Bank transfer initiation failed: ${error.message}`);
-      throw error;
-    }
-  }
+  async handleWebhook(data) {
+    const rawBody = (data as any).rawBody;
+    console.log('webhook was called');
+    const signature = data.headers['verif-hash'];
+    const secret = this.configService.get('FLUTTER_SECRET_KEY');
 
-  async chargeNigeriaAccount(payload: any): Promise<any> {
-    try {
-      return await this.flw.Charge.ng_account(payload);
-    } catch (error) {
-      this.logger.error(`Nigeria Direct Debit failed: ${error.message}`);
-      throw error;
+    if (signature !== secret) {
+      throw new UnauthorizedException('Invalid signature');
     }
-  }
 
-  async chargeUSSD(payload: any): Promise<any> {
-    try {
-      return await this.flw.Charge.ussd(payload);
-    } catch (error) {
-      this.logger.error(`USSD payment failed: ${error.message}`);
-      throw error;
-    }
-  }
+    const event = data.body as FlutterwaveWebhookEvent;
 
-  async chargeENaira(payload: any): Promise<any> {
-    try {
-      return await this.flw.Charge.enaira(payload);
-    } catch (error) {
-      this.logger.error(`eNaira payment failed: ${error.message}`);
-      throw error;
+    if (
+      event?.event === 'charge.completed' &&
+      event.data?.status === 'successful'
+    ) {
+      const userId = event.data.meta?.userId as string;
+      const amount = new Decimal(event.data.amount);
+      await this.walletService.creditWallet(userId, amount);
     }
-  }
 
-  async verifyTransaction(id: string): Promise<any> {
-    try {
-      return await this.flw.Transaction.verify({ id });
-    } catch (error) {
-      this.logger.error(`Transaction verification failed: ${error.message}`);
-      throw error;
-    }
+    return { status: 'success' };
   }
+}
+
+export interface FlutterwaveWebhookEvent {
+  event: string;
+  data: {
+    status: string;
+    amount: string;
+    meta?: {
+      userId?: string;
+    };
+  };
 }
