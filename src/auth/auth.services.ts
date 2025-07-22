@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/auth.dto';
@@ -20,10 +16,17 @@ export class AuthService {
       where: { email: data.email },
     });
 
-    if (!user) {
+    // --- START: THE CRITICAL FIX ---
+    // This single check handles three cases:
+    // 1. User with this email does not exist (`!user` is true).
+    // 2. User exists, but was created without a password (`!user.password` is true).
+    // The `||` operator short-circuits, so if `!user` is true, it never tries to access `user.password`, preventing a crash.
+    if (!user || !user.password) {
       throw new UnauthorizedException('Email or password incorrect');
     }
+    // --- END: THE CRITICAL FIX ---
 
+    // Now, we are GUARANTEED that `user` is a valid object and `user.password` is a string.
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
     if (!isPasswordValid) {
@@ -32,12 +35,12 @@ export class AuthService {
 
     const payload = { sub: user.id, email: user.email };
 
-    const accesToken = await this.jwtService.signAsync(payload);
+    const accessToken = await this.jwtService.signAsync(payload);
 
     const { password, ...result } = user;
     return {
       user: result,
-      token: accesToken,
+      token: accessToken,
     };
   }
 }

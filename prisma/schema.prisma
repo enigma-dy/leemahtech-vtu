@@ -9,20 +9,26 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(ulid())
-  fullName  String
-  username  String   @unique
-  email     String   @unique
-  password  String
-  phone     String
-  address   String
-  walletId String   @unique
+  id                String   @id @default(ulid())
+  telegramId        BigInt?  @unique
+  telegramFirstName String?
+  telegramUsername  String?
+  username String?
 
-  wallet   Wallet  @relation(fields: [walletId], references: [id])
+  fullName          String?
+  email             String?  @unique 
+  password          String?         
+
+  phone             String?
+  address           String?
+  walletId          String   @unique
+
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
 
+  AccountLinkToken AccountLinkToken?
+}
 model Wallet {
   id        String    @id @default(uuid())
   name      String
@@ -87,4 +93,13 @@ enum SmeProvider {
 model ProviderSetting {
   id             Int      @id @default(1)
   activeProvider SmeProvider
+}
+
+model AccountLinkToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @unique 
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }

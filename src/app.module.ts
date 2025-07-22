@@ -14,6 +14,9 @@ import { WalletModule } from './wallet/wallet.module';
 import { OpayModule } from './payment-gateway/opay/opay.module';
 import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
 
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { VtuTelegramBotModule } from './telegram-bot/bot.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -28,6 +31,8 @@ import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
     DataModule,
     SmeProviderModule,
     OpayModule,
+    VtuTelegramBotModule,
+    EventEmitterModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],
