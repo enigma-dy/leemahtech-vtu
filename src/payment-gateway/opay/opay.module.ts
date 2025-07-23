@@ -1,10 +1,11 @@
 import { HttpModule } from '@nestjs/axios';
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { OpayService } from './opay.service';
 import { OpayController } from './opay.controller';
+import { WalletModule } from 'src/wallet/wallet.module';
 
 @Module({
-  imports: [HttpModule],
+  imports: [HttpModule, forwardRef(() => WalletModule)],
   providers: [OpayService],
   controllers: [OpayController],
   exports: [OpayService],

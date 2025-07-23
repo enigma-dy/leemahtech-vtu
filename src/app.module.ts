@@ -16,10 +16,15 @@ import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
 
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { VtuTelegramBotModule } from './telegram-bot/bot.module';
+import opayConfig from './payment-gateway/opay/config/opay.config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+      load: [opayConfig],
+    }),
     PrismaModule,
     UserModule,
     AuthModule,

@@ -16,17 +16,10 @@ export class AuthService {
       where: { email: data.email },
     });
 
-    // --- START: THE CRITICAL FIX ---
-    // This single check handles three cases:
-    // 1. User with this email does not exist (`!user` is true).
-    // 2. User exists, but was created without a password (`!user.password` is true).
-    // The `||` operator short-circuits, so if `!user` is true, it never tries to access `user.password`, preventing a crash.
     if (!user || !user.password) {
       throw new UnauthorizedException('Email or password incorrect');
     }
-    // --- END: THE CRITICAL FIX ---
 
-    // Now, we are GUARANTEED that `user` is a valid object and `user.password` is a string.
     const isPasswordValid = await bcrypt.compare(data.password, user.password);
 
     if (!isPasswordValid) {

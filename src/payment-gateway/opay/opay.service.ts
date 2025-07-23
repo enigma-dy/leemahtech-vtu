@@ -4,10 +4,14 @@ import { OpayPaymentRequest, OpayStatusRequest } from './dto/opay.dto';
 import { firstValueFrom } from 'rxjs';
 import * as qs from 'qs';
 import { sha512 } from 'js-sha512';
+import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()
 export class OpayService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly walletService: WalletService,
+  ) {}
 
   private generateHmacSignature(data: any): string {
     const privateKey = process.env.OPAY_PRIVATE_KEY;
@@ -68,7 +72,9 @@ export class OpayService {
         }),
       );
 
-      return response.data;
+      console.log({ response });
+
+      return response.status;
     } catch (error) {
       console.error('Error checking payment status:', error);
       throw new Error(`Failed to check payment status: ${error.message}`);

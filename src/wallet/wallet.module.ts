@@ -5,11 +5,15 @@ import { HusmodModule } from 'src/providers/husmod/husmod.module';
 import { WalletService } from './wallet.service';
 import { WalletController } from './wallet.controller';
 import { FlutterwaveModule } from 'src/payment-gateway/flutter/flutter.module';
+import { OpayModule } from 'src/payment-gateway/opay/opay.module';
+import { UserModule } from 'src/user/user.module';
 
 @Module({
   imports: [
     DataStationModule,
     HusmodModule,
+    UserModule,
+    forwardRef(() => OpayModule),
     forwardRef(() => FlutterwaveModule),
   ],
   providers: [WalletService],

@@ -70,6 +70,18 @@ export class UserService {
     return userData;
   }
 
+  async getUserById(id: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: id },
+      include: { wallet: true },
+    });
+    if (!user) {
+      throw new NotFoundException();
+    }
+    const { password, ...userData } = user;
+    return userData;
+  }
+
   async updateUser(email: string, data: UpdateUserDto) {
     const user = await this.prisma.user.findFirst({ where: { email: email } });
 
