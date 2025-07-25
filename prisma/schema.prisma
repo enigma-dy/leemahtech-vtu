@@ -28,6 +28,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   AccountLinkToken AccountLinkToken?
+
+  Transaction Transaction[]
 }
 model Wallet {
   id        String    @id @default(uuid())
@@ -102,4 +104,30 @@ model AccountLinkToken {
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  txRef         String   @unique
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  amount        Decimal  @db.Decimal(20, 2)
+  currency      String   @default("NGN")
+  status        TransactionStatus @default(PENDING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  completedAt   DateTime?
+
+  errorMessage  String?
+  channel       String?  // e.g., 'Web', 'MobileApp'
+  provider      String?  // e.g., 'Opay'
+  walletId      String?
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  EXPIRED
 }

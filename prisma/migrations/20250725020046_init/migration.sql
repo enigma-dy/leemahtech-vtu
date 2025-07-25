@@ -4,15 +4,21 @@ CREATE TYPE "EntryType" AS ENUM ('DEBIT', 'CREDIT');
 -- CreateEnum
 CREATE TYPE "SmeProvider" AS ENUM ('datastation', 'husmodata', 'direct');
 
+-- CreateEnum
+CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'EXPIRED');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "fullName" TEXT NOT NULL,
-    "username" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "password" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
-    "address" TEXT NOT NULL,
+    "telegramId" BIGINT,
+    "telegramFirstName" TEXT,
+    "telegramUsername" TEXT,
+    "username" TEXT,
+    "fullName" TEXT,
+    "email" TEXT,
+    "password" TEXT,
+    "phone" TEXT,
+    "address" TEXT,
     "walletId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -81,8 +87,38 @@ CREATE TABLE "ProviderSetting" (
     CONSTRAINT "ProviderSetting_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "AccountLinkToken" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AccountLinkToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Transaction" (
+    "id" TEXT NOT NULL,
+    "txRef" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "amount" DECIMAL(20,2) NOT NULL,
+    "currency" TEXT NOT NULL DEFAULT 'NGN',
+    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "completedAt" TIMESTAMP(3),
+    "errorMessage" TEXT,
+    "channel" TEXT,
+    "provider" TEXT,
+    "walletId" TEXT,
+
+    CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
-CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
+CREATE UNIQUE INDEX "User_telegramId_key" ON "User"("telegramId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
@@ -93,6 +129,15 @@ CREATE UNIQUE INDEX "User_walletId_key" ON "User"("walletId");
 -- CreateIndex
 CREATE UNIQUE INDEX "DataPrice_network_id_plan_name_id_key" ON "DataPrice"("network_id", "plan_name_id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "AccountLinkToken_token_key" ON "AccountLinkToken"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AccountLinkToken_userId_key" ON "AccountLinkToken"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Transaction_txRef_key" ON "Transaction"("txRef");
+
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_walletId_fkey" FOREIGN KEY ("walletId") REFERENCES "Wallet"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -101,3 +146,9 @@ ALTER TABLE "Entry" ADD CONSTRAINT "Entry_walletId_fkey" FOREIGN KEY ("walletId"
 
 -- AddForeignKey
 ALTER TABLE "Entry" ADD CONSTRAINT "Entry_ledgerId_fkey" FOREIGN KEY ("ledgerId") REFERENCES "Ledger"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AccountLinkToken" ADD CONSTRAINT "AccountLinkToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

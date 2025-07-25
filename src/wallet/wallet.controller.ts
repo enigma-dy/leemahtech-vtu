@@ -19,6 +19,7 @@ export class WalletController {
     private readonly flutterwaveService: FlutterwaveService,
     private readonly opayService: OpayService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Post('credit')
@@ -29,6 +30,7 @@ export class WalletController {
       throw new Error();
     }
     const tx_ref = `tx-${uuidv4()}`;
+    const rawAmount = Number(data.amount);
     const redirect_url = process.env.REDIRECT_URL;
 
     const callbackUrl =
@@ -42,7 +44,7 @@ export class WalletController {
       country: 'NG',
       amount: {
         currency: 'NGN',
-        total: Number(data.amount) * 100,
+        total: rawAmount * 100,
       },
       callbackUrl,
       returnUrl,
@@ -65,17 +67,19 @@ export class WalletController {
 
     const amount = data.amount;
 
+    await this.prisma.transaction.create({
+      data: {
+        txRef: tx_ref,
+        userId: user.id,
+        amount: new Decimal(rawAmount),
+        status: 'PENDING',
+        provider: 'Opay',
+      },
+    });
+
     return await this.opayService.createPayment(opayPayload);
   }
 
-  @Post('debit')
-  async debitAccount(@Body() data: WalletDto, @Req() request: Request) {
-    const { sub } = request['user'];
-
-    const amount = data.amount;
-
-    return await this.accountService.debitWallet(sub, new Decimal(amount));
-  }
   @Get('balance')
   async getBalance(@Req() request: Request) {
     const { sub } = request['user'];

@@ -50,7 +50,7 @@ export class OpayService {
     }
   }
 
-  async checkPaymentStatus(data: OpayStatusRequest) {
+  async checkPaymentStatus(payload) {
     try {
       if (
         !process.env.OPAY_STATUS_URL ||
@@ -60,10 +60,10 @@ export class OpayService {
         throw new Error('Opay configuration is incomplete');
       }
 
-      const hmacSignature = this.generateHmacSignature(data);
+      const hmacSignature = this.generateHmacSignature(payload);
 
       const response = await firstValueFrom(
-        this.httpService.post(process.env.OPAY_STATUS_URL, data, {
+        this.httpService.post(process.env.OPAY_STATUS_URL, payload, {
           headers: {
             MerchantId: process.env.OPAY_MERCHANT_ID,
             Authorization: `Bearer ${hmacSignature}`,
@@ -72,9 +72,31 @@ export class OpayService {
         }),
       );
 
-      console.log({ response });
+      const { data } = response;
 
-      return response.status;
+      const originalPayload = JSON.parse(response.config.data);
+
+      const {
+        amount,
+        instrumentType,
+        errorCode,
+        transactionId,
+        reference,
+        status,
+        timestamp,
+        refunded,
+      } = originalPayload.payload;
+
+      return {
+        amount,
+        instrumentType,
+        errorCode,
+        transactionId,
+        reference,
+        status,
+        timestamp,
+        refunded,
+      };
     } catch (error) {
       console.error('Error checking payment status:', error);
       throw new Error(`Failed to check payment status: ${error.message}`);
