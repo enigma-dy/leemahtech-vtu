@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDecimal,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -9,6 +10,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { Decimal } from 'generated/prisma/runtime/library';
 
 export class DataStationDto {
   @IsString()
@@ -19,6 +21,9 @@ export class DataStationDto {
 
   @IsString()
   plan: string;
+
+  @IsDecimal()
+  price: Decimal;
 
   @IsBoolean()
   Ported_number: boolean;

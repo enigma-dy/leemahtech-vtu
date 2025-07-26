@@ -86,14 +86,19 @@ export class DataStationService {
     }
   }
 
-  async buyData(data: DataStationDto): Promise<any> {
+  async buyData(userId: string, data: DataStationDto): Promise<any> {
     try {
+      const { price, ...planDetails } = data;
       const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/data/', data, {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+        this.httpService.post(
+          'https://datastationapi.com/api/data/',
+          planDetails,
+          {
+            headers: {
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+            },
           },
-        }),
+        ),
       );
       console.log('Response:', response.data);
       return response.data;

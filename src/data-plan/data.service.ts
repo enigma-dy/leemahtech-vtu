@@ -112,22 +112,15 @@ export class DataService {
     });
   }
 
-  async buyData(data: DataStationDto): Promise<any> {
+  async buyData(userId: string, data: DataStationDto): Promise<any> {
     const active = await this.activeProvider.getActiveProvider();
-
-    console.log(active);
 
     switch (active) {
       case SmeProvider.datastation:
-        console.log('buying from datastation');
-        return this.dataStationService.buyData(data);
+        return this.dataStationService.buyData(userId, data);
 
       case SmeProvider.husmodata:
-        console.log('buying from husmod');
-        return this.husmodService.buyData(data);
-
-      // case SmeProvider.direct:
-      //   return this.directService.buyData(data);
+        return this.husmodService.buyData(userId, data);
 
       default:
         throw new Error(`Unsupported provider: ${active}`);

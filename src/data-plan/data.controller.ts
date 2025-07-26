@@ -42,7 +42,8 @@ export class DataController {
     @Res() res: Response,
   ) {
     try {
-      const response = await this.dataService.buyData(data);
+      const { sub } = request['user'];
+      const response = await this.dataService.buyData(sub, data);
 
       return res.status(200).json({
         status: 'success',

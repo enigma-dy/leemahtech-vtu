@@ -10,10 +10,15 @@ import {
   ElectricityPaymentDto,
   ExamPinPurchaseDto,
 } from './dto/datastation.dto';
+import { WalletService } from 'src/wallet/wallet.service';
+import { Amount } from 'src/payment-gateway/opay/dto/opay.dto';
 
 @Injectable()
 export class HusmodService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly walletService: WalletService,
+  ) {}
 
   async getMyHusmodDetails(): Promise<any> {
     try {
@@ -88,16 +93,22 @@ export class HusmodService {
     }
   }
 
-  async buyData(data: DataStationDto): Promise<any> {
+  async buyData(userId: string, data: DataStationDto): Promise<any> {
+    const { price, ...planDetails } = data;
     try {
       const response = await firstValueFrom(
-        this.httpService.post('https://husmodataapi.com/api/data/', data, {
-          headers: {
-            Authorization: `Token ${process.env.HUSMOD_API_KEY}`,
+        this.httpService.post(
+          'https://husmodataapi.com/api/data/',
+          planDetails,
+          {
+            headers: {
+              Authorization: `Token ${process.env.HUSMOD_API_KEY}`,
+            },
           },
-        }),
+        ),
       );
 
+      this.walletService.debitWallet(userId, data.price);
       return response.data;
     } catch (error) {
       console.error('DataStation API Error:', {
