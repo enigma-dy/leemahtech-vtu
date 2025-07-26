@@ -1,17 +1,23 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Req } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
 import { OpayPaymentRequest, OpayStatusRequest } from './dto/opay.dto';
 import { OpayService } from './opay.service';
 import { Public } from 'src/decorators/auth.decorator';
 import { WalletService } from 'src/wallet/wallet.service';
 import { PrismaService } from 'src/db/prisma.service';
 import { Decimal } from 'generated/prisma/runtime/library';
+import { WalletDto } from 'src/wallet/dto/wallet.dto';
+import { UserService } from 'src/user/user.service';
+import { ConfigService } from '@nestjs/config';
 
-@Controller('payments/opay')
+@Controller('opay')
 export class OpayController {
   constructor(
     private readonly opayService: OpayService,
     private readonly prisma: PrismaService,
     private readonly walletService: WalletService,
+    private readonly userService: UserService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('credit')

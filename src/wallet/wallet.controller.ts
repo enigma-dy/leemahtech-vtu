@@ -1,9 +1,6 @@
 import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
-import { v4 as uuidv4 } from 'uuid';
 
-import { Decimal } from 'generated/prisma/runtime/library';
-import { WalletDto } from './dto/wallet.dto';
 import { WalletService } from './wallet.service';
 import { FlutterwaveService } from 'src/payment-gateway/flutter/flutter.service';
 import { OpayService } from 'src/payment-gateway/opay/opay.service';
