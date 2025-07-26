@@ -10,11 +10,7 @@ import { HusmodService } from 'src/providers/husmod/husmod.service';
 
 @Injectable()
 export class WalletService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly dataStationService: DataStationService,
-    private readonly husmodSevice: HusmodService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async creditWallet(userId: string, amount: Decimal) {
     return await this.prisma.$transaction(async (tx) => {
@@ -115,12 +111,12 @@ export class WalletService {
     return user.wallet.balance;
   }
 
-  async getProviderBalance() {
-    const dataStationBal =
-      await this.dataStationService.getMyDataStationDetails();
+  // async getProviderBalance() {
+  //   const dataStationBal =
+  //     await this.dataStationService.getMyDataStationDetails();
 
-    const husmodBal = await this.husmodSevice.getMyHusmodDetails();
+  //   const husmodBal = await this.husmodSevice.getMyHusmodDetails();
 
-    return { dataStationBal, husmodBal };
-  }
+  //   return { dataStationBal, husmodBal };
+  // }
 }

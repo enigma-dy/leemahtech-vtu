@@ -10,23 +10,11 @@ import { ConfigService } from '@nestjs/config';
 
 @Controller('wallet')
 export class WalletController {
-  constructor(
-    private readonly accountService: WalletService,
-    private readonly userService: UserService,
-    private readonly flutterwaveService: FlutterwaveService,
-    private readonly opayService: OpayService,
-    private readonly configService: ConfigService,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly accountService: WalletService) {}
 
   @Get('balance')
   async getBalance(@Req() request: Request) {
     const { sub } = request['user'];
     return await this.accountService.getBalance(sub);
-  }
-
-  @Get('provider-balance')
-  async getPoviderBalance() {
-    return this.accountService.getProviderBalance();
   }
 }

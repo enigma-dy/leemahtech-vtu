@@ -9,13 +9,7 @@ import { OpayModule } from 'src/payment-gateway/opay/opay.module';
 import { UserModule } from 'src/user/user.module';
 
 @Module({
-  imports: [
-    DataStationModule,
-    HusmodModule,
-    UserModule,
-    forwardRef(() => OpayModule),
-    forwardRef(() => FlutterwaveModule),
-  ],
+  imports: [UserModule],
   providers: [WalletService],
   controllers: [WalletController],
   exports: [WalletService],

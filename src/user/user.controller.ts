@@ -16,9 +16,9 @@ export class UserController {
 
   @Get('user')
   async getUser(@Req() request: Request) {
-    const { email } = request['user'];
+    const { sub, email } = request['user'];
 
-    return this.userService.getUser(email);
+    return this.userService.getUserByEmail(email);
   }
 
   @Put('update')

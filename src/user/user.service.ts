@@ -58,7 +58,7 @@ export class UserService {
     }
   }
 
-  async getUser(email: string) {
+  async getUserByEmail(email: string) {
     const user = await this.prisma.user.findFirst({
       where: { email: email },
       include: { wallet: true },

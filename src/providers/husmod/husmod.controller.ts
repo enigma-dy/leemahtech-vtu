@@ -53,7 +53,8 @@ export class HusmodController {
     @Res() res: Response,
   ) {
     try {
-      const response = await this.HusmodService.buyData(data);
+      const { sub, email } = request['user'];
+      const response = await this.HusmodService.buyData(sub, data);
 
       return res.status(200).json({
         status: 'success',

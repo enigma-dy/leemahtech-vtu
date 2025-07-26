@@ -52,7 +52,8 @@ export class DataStationController {
     @Res() res: Response,
   ) {
     try {
-      const response = await this.DataStationService.buyData(data);
+      const { sub, email } = request['user'];
+      const response = await this.DataStationService.buyData(sub, data);
 
       return res.status(200).json({
         status: 'success',
