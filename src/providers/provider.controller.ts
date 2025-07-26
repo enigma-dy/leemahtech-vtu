@@ -6,7 +6,7 @@ import { SetSmeProviderDto } from './dto/provider.dto';
 export class SmeProviderController {
   constructor(private readonly providerService: ProviderSettingService) {}
 
-  @Get()
+  @Get('get')
   async getProvider() {
     return await this.providerService.getActiveProvider();
   }

@@ -16,9 +16,14 @@ import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
 export class DataController {
   constructor(private readonly dataService: DataService) {}
 
-  @Post('init')
+  @Get('init')
   async initializeDataPrice() {
     return this.dataService.initailDataPrice();
+  }
+
+  @Get('sync')
+  async syncDataPrice() {
+    return this.dataService.fetchAndStoreAllPlans();
   }
 
   @Get('all')

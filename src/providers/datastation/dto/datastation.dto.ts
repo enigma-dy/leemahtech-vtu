@@ -22,6 +22,12 @@ export class DataStationDto {
   @IsString()
   plan: string;
 
+  @IsString()
+  plan_size: string;
+
+  @IsString()
+  plan_volume: string;
+
   @IsDecimal()
   price: Decimal;
 

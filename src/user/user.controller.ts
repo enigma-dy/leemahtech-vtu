@@ -4,21 +4,28 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Public } from 'src/decorators/auth.decorator';
 import { request } from 'http';
 
-@Controller()
+@Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Public()
-  @Post('user')
+  @Post('register')
   async createUser(@Body() data: CreateUserDto) {
     return this.userService.createUser(data);
   }
 
-  @Get('user')
-  async getUser(@Req() request: Request) {
+  @Get('email')
+  async getUserEmail(@Req() request: Request) {
     const { sub, email } = request['user'];
 
     return this.userService.getUserByEmail(email);
+  }
+
+  @Get('id')
+  async getUserById(@Req() request: Request) {
+    const { sub, email } = request['user'];
+
+    return this.userService.getUserById(sub);
   }
 
   @Put('update')

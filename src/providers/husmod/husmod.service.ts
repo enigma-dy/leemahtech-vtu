@@ -77,7 +77,7 @@ export class HusmodService {
   async getDataPricing(): Promise<any> {
     try {
       const response = await firstValueFrom(
-        this.httpService.get('https://husmodataapi.com/api/get/network/', {
+        this.httpService.get('https://husmodataapi.com/api/network/', {
           headers: {
             Authorization: `Token ${process.env.HUSMOD_API_KEY}`,
           },

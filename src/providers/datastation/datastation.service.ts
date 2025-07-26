@@ -9,10 +9,14 @@ import {
   ElectricityPaymentDto,
   ExamPinPurchaseDto,
 } from './dto/datastation.dto';
+import { PrismaService } from 'src/db/prisma.service';
 
 @Injectable()
 export class DataStationService {
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async getMyDataStationDetails(): Promise<any> {
     try {
@@ -86,8 +90,62 @@ export class DataStationService {
     }
   }
 
-  async buyData(userId: string, data: DataStationDto): Promise<any> {
+  async buyData(userId: string, data: DataStationDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { wallet: true },
+    });
+
+    if (!user || !user.wallet || user.wallet.balance < data.price) {
+      throw new Error('Insufficient wallet balance');
+    }
+
+    // Step 1: Create Ledger
+    const ledger = await this.prisma.ledger.create({
+      data: {
+        description: `Buy Data - ${data.plan}`,
+        createdBy: userId,
+      },
+    });
+
+    // Step 2: Debit User Wallet Entry
+    await this.prisma.entry.create({
+      data: {
+        walletId: user.wallet.id,
+        ledgerId: ledger.id,
+        amount: data.price,
+        type: 'DEBIT',
+      },
+    });
+
+    // Step 3: Create Transaction
+    const transaction = await this.prisma.transaction.create({
+      data: {
+        txRef: `TX-${Date.now()}`,
+        userId,
+        amount: data.price,
+        walletId: user.wallet.id,
+        status: 'PENDING',
+        channel: 'App',
+        provider: 'datastation',
+      },
+    });
+
+    // Step 4: Create DataPurchase
+    const dataPurchase = await this.prisma.dataPurchase.create({
+      data: {
+        userId,
+        network: data.network,
+        planName: data.plan,
+        planSize: data.plan_size,
+        planVolume: data.plan_volume,
+        amount: data.price,
+        status: 'PENDING',
+      },
+    });
+
     try {
+      // Step 5: Call API
       const { price, ...planDetails } = data;
       const response = await firstValueFrom(
         this.httpService.post(
@@ -100,15 +158,46 @@ export class DataStationService {
           },
         ),
       );
-      console.log('Response:', response.data);
-      return response.data;
+
+      console.log(response);
+
+      // Step 6: Update Records on Success
+      // await Promise.all([
+      //   this.prisma.dataPurchase.update({
+      //     where: { id: dataPurchase.id },
+      //     data: {
+      //       status: 'SUCCESS',
+      //       response: response.data,
+      //     },
+      //   }),
+      //   this.prisma.transaction.update({
+      //     where: { id: transaction.id },
+      //     data: {
+      //       status: 'SUCCESS',
+      //       completedAt: new Date(),
+      //     },
+      //   }),
+      // ]);
+
+      // return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
+      // Step 7: Update Records on Failure
+      // await Promise.all([
+      //   this.prisma.dataPurchase.update({
+      //     where: { id: dataPurchase.id },
+      //     data: {
+      //       status: 'FAILED',
+      //       response: error?.response?.data || { message: error.message },
+      //     },
+      //   }),
+      //   this.prisma.transaction.update({
+      //     where: { id: transaction.id },
+      //     data: {
+      //       status: 'FAILED',
+      //       errorMessage: error.message,
+      //     },
+      //   }),
+      // ]);
 
       throw error;
     }

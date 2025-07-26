@@ -30,6 +30,8 @@ model User {
   AccountLinkToken AccountLinkToken?
 
   Transaction Transaction[]
+
+  DataPurchase DataPurchase[]
 }
 model Wallet {
   id        String    @id @default(uuid())
@@ -119,10 +121,32 @@ model Transaction {
   completedAt   DateTime?
 
   errorMessage  String?
-  channel       String?  // e.g., 'Web', 'MobileApp'
-  provider      String?  // e.g., 'Opay'
+  channel       String?  
+  provider      String?  
   walletId      String?
 }
+
+model DataPurchase {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  network     String
+  planName    String
+  planSize    String
+  planVolume String
+  amount      Decimal  @db.Decimal(20, 2)
+  status      PurchaseStatus @default(PENDING)
+  response    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum PurchaseStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 
 enum TransactionStatus {
   PENDING
@@ -130,4 +154,22 @@ enum TransactionStatus {
   FAILED
   CANCELLED
   EXPIRED
+}
+
+
+
+model UnifiedPlan {
+  id            String   @id @default(uuid())
+  provider      SmeProvider
+  data_plan_id  String
+  network_id    Int
+  network_name  String
+  plan_amount   Float
+  plan_size     String
+  plan_type     String
+  validity      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([provider, data_plan_id])
 }
