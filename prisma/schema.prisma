@@ -156,20 +156,20 @@ enum TransactionStatus {
   EXPIRED
 }
 
-
-
 model UnifiedPlan {
   id            String   @id @default(uuid())
   provider      SmeProvider
   data_plan_id  String
   network_id    Int
   network_name  String
-  plan_amount   Float
+  plan_amount   Decimal
+  selling_price Decimal
   plan_size     String
   plan_type     String
   validity      String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  
 
   @@unique([provider, data_plan_id])
 }

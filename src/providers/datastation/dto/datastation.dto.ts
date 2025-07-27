@@ -13,24 +13,31 @@ import {
 import { Decimal } from 'generated/prisma/runtime/library';
 
 export class DataStationDto {
+  @IsNotEmpty()
   @IsString()
   network: string;
 
-  @IsString()
+  @IsNotEmpty()
+  // @IsPhoneNumber('NG')
   mobile_number: string;
 
+  @IsNotEmpty()
   @IsString()
   plan: string;
 
+  @IsNotEmpty()
   @IsString()
-  plan_size: string;
+  planSize: string;
 
+  @IsNotEmpty()
   @IsString()
-  plan_volume: string;
+  planVolume: string;
 
-  @IsDecimal()
-  price: Decimal;
+  @IsNotEmpty()
+  @IsString()
+  planName: string;
 
+  @IsNotEmpty()
   @IsBoolean()
   Ported_number: boolean;
 }

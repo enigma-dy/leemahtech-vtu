@@ -6,18 +6,23 @@ import {
   AirTime2CastDto,
   AirtimePurchaseDto,
   CardPurchaseDto,
-  DataStationDto,
   ElectricityPaymentDto,
   ExamPinPurchaseDto,
-} from './dto/datastation.dto';
+  HusmodDataDto,
+} from './dto/husmod.dto';
 import { WalletService } from 'src/wallet/wallet.service';
 import { Amount } from 'src/payment-gateway/opay/dto/opay.dto';
+
+import { PrismaService } from 'src/db/prisma.service';
+import { DataDto } from 'src/data-plan/dto/data.dto';
+import { Decimal } from 'generated/prisma/runtime/library';
 
 @Injectable()
 export class HusmodService {
   constructor(
     private readonly httpService: HttpService,
     private readonly walletService: WalletService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async getMyHusmodDetails(): Promise<any> {
@@ -93,30 +98,124 @@ export class HusmodService {
     }
   }
 
-  async buyData(userId: string, data: DataStationDto): Promise<any> {
-    const { price, ...planDetails } = data;
+  async buyData(userId: string, data: HusmodDataDto, selling_price: Decimal) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { wallet: true },
+    });
+
+    console.log(user?.wallet.balance, selling_price);
+
+    if (
+      !user ||
+      !user.wallet ||
+      user.wallet.balance.lt(new Decimal(selling_price))
+    ) {
+      throw new Error('Insufficient wallet balance');
+    }
+
+    // Create Ledger
+    const ledger = await this.prisma.ledger.create({
+      data: {
+        description: `Buy Data - ${data.plan}`,
+        createdBy: userId,
+      },
+    });
+
+    // Debit Wallet Entry
+    await this.prisma.entry.create({
+      data: {
+        walletId: user.wallet.id,
+        ledgerId: ledger.id,
+        amount: selling_price,
+        type: 'DEBIT',
+      },
+    });
+
+    // Create Transaction
+    const transaction = await this.prisma.transaction.create({
+      data: {
+        txRef: `TX-${Date.now()}`,
+        userId,
+        amount: selling_price,
+        walletId: user.wallet.id,
+        status: 'PENDING',
+        channel: 'App',
+        provider: 'datastation',
+      },
+    });
+
+    //Create DataPurchase Record
+    const dataPurchase = await this.prisma.dataPurchase.create({
+      data: {
+        userId,
+        network: data.network,
+        planName: data.plan,
+        planSize: data.planSize,
+        planVolume: data.planSize,
+        amount: selling_price,
+        status: 'PENDING',
+      },
+    });
+
+    // Call the API
     try {
+      const payloadToSend = {
+        network: data.network,
+        mobile_number: data.mobile_number,
+        plan: data.plan,
+        Ported_number: data.Ported_number,
+      };
+
       const response = await firstValueFrom(
         this.httpService.post(
-          'https://husmodataapi.com/api/data/',
-          planDetails,
+          'https://husmodataapi.com/api/data',
+          payloadToSend,
           {
             headers: {
-              Authorization: `Token ${process.env.HUSMOD_API_KEY}`,
+              Authorization: `Token ${process.env.DataStation_API_KEY}`,
             },
           },
         ),
       );
 
-      this.walletService.debitWallet(userId, data.price);
+      //Update transaction and data purchase
+      await Promise.all([
+        this.prisma.dataPurchase.update({
+          where: { id: dataPurchase.id },
+          data: {
+            status: 'SUCCESS',
+            response: response.data,
+          },
+        }),
+        this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'SUCCESS',
+            completedAt: new Date(),
+          },
+        }),
+      ]);
+
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
+      // Step 7: On Failure, update transaction and data purchase
+      await Promise.all([
+        this.prisma.dataPurchase.update({
+          where: { id: dataPurchase.id },
+          data: {
+            status: 'FAILED',
+            response: error?.response?.data || { message: error.message },
+          },
+        }),
+        this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: error.message,
+          },
+        }),
+      ]);
 
       throw error;
     }

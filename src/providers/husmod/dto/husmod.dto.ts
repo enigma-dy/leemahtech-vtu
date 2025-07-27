@@ -12,19 +12,32 @@ import {
 } from 'class-validator';
 import { Decimal } from 'generated/prisma/runtime/library';
 
-export class DataStationDto {
+export class HusmodDataDto {
+  @IsNotEmpty()
   @IsString()
   network: string;
 
-  @IsString()
+  @IsNotEmpty()
+  // @IsPhoneNumber('NG')
   mobile_number: string;
 
+  @IsNotEmpty()
   @IsString()
   plan: string;
 
-  @IsDecimal()
-  price: Decimal;
+  @IsNotEmpty()
+  @IsString()
+  planSize: string;
 
+  @IsNotEmpty()
+  @IsString()
+  planVolume: string;
+
+  @IsNotEmpty()
+  @IsString()
+  planName: string;
+
+  @IsNotEmpty()
   @IsBoolean()
   Ported_number: boolean;
 }

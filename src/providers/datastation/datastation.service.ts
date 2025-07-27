@@ -10,6 +10,7 @@ import {
   ExamPinPurchaseDto,
 } from './dto/datastation.dto';
 import { PrismaService } from 'src/db/prisma.service';
+import { Decimal } from 'generated/prisma/runtime/library';
 
 @Injectable()
 export class DataStationService {
@@ -90,13 +91,13 @@ export class DataStationService {
     }
   }
 
-  async buyData(userId: string, data: DataStationDto) {
+  async buyData(userId: string, data: DataStationDto, selling_price: Decimal) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { wallet: true },
     });
 
-    if (!user || !user.wallet || user.wallet.balance < data.price) {
+    if (!user || !user.wallet || user.wallet.balance < selling_price) {
       throw new Error('Insufficient wallet balance');
     }
 
@@ -108,12 +109,12 @@ export class DataStationService {
       },
     });
 
-    // Step 2: Debit User Wallet Entry
+    // Step 2: Debit Wallet Entry
     await this.prisma.entry.create({
       data: {
         walletId: user.wallet.id,
         ledgerId: ledger.id,
-        amount: data.price,
+        amount: selling_price,
         type: 'DEBIT',
       },
     });
@@ -123,7 +124,7 @@ export class DataStationService {
       data: {
         txRef: `TX-${Date.now()}`,
         userId,
-        amount: data.price,
+        amount: selling_price,
         walletId: user.wallet.id,
         status: 'PENDING',
         channel: 'App',
@@ -131,26 +132,31 @@ export class DataStationService {
       },
     });
 
-    // Step 4: Create DataPurchase
+    // Step 4: Create DataPurchase Record
     const dataPurchase = await this.prisma.dataPurchase.create({
       data: {
         userId,
         network: data.network,
         planName: data.plan,
-        planSize: data.plan_size,
-        planVolume: data.plan_volume,
-        amount: data.price,
+        planSize: data.planSize,
+        planVolume: data.planSize,
+        amount: selling_price,
         status: 'PENDING',
       },
     });
 
     try {
-      // Step 5: Call API
-      const { price, ...planDetails } = data;
+      const payloadToSend = {
+        network: data.network,
+        mobile_number: data.mobile_number,
+        plan: data.plan,
+        Ported_number: data.Ported_number,
+      };
+
       const response = await firstValueFrom(
         this.httpService.post(
           'https://datastationapi.com/api/data/',
-          planDetails,
+          payloadToSend,
           {
             headers: {
               Authorization: `Token ${process.env.DataStation_API_KEY}`,
@@ -159,316 +165,43 @@ export class DataStationService {
         ),
       );
 
-      console.log(response);
-
-      // Step 6: Update Records on Success
-      // await Promise.all([
-      //   this.prisma.dataPurchase.update({
-      //     where: { id: dataPurchase.id },
-      //     data: {
-      //       status: 'SUCCESS',
-      //       response: response.data,
-      //     },
-      //   }),
-      //   this.prisma.transaction.update({
-      //     where: { id: transaction.id },
-      //     data: {
-      //       status: 'SUCCESS',
-      //       completedAt: new Date(),
-      //     },
-      //   }),
-      // ]);
-
-      // return response.data;
-    } catch (error) {
-      // Step 7: Update Records on Failure
-      // await Promise.all([
-      //   this.prisma.dataPurchase.update({
-      //     where: { id: dataPurchase.id },
-      //     data: {
-      //       status: 'FAILED',
-      //       response: error?.response?.data || { message: error.message },
-      //     },
-      //   }),
-      //   this.prisma.transaction.update({
-      //     where: { id: transaction.id },
-      //     data: {
-      //       status: 'FAILED',
-      //       errorMessage: error.message,
-      //     },
-      //   }),
-      // ]);
-
-      throw error;
-    }
-  }
-
-  async getallDataTransaction(): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+      // Step 6: On Success, update transaction and data purchase
+      await Promise.all([
+        this.prisma.dataPurchase.update({
+          where: { id: dataPurchase.id },
+          data: {
+            status: 'SUCCESS',
+            response: response.data,
           },
         }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async queryDataTransaction(id: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(`https://datastationapi.com/api/data/${id}`, {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+        this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'SUCCESS',
+            completedAt: new Date(),
           },
         }),
-      );
-      console.log('Response:', response.data);
+      ]);
+
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async queryBillPayment(id: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(
-          `https://datastationapi.com/api/billpayment/${id}`,
-          {
-            headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
-            },
-          },
-        ),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async queryCableSub(id: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(`https://datastationapi.com/api/cablesub/${id}`, {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+      // Step 7: On Failure, update transaction and data purchase
+      await Promise.all([
+        this.prisma.dataPurchase.update({
+          where: { id: dataPurchase.id },
+          data: {
+            status: 'FAILED',
+            response: error?.response?.data || { message: error.message },
           },
         }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async validateIUC(id: string, iuc: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(
-          `https://datastationapi.com/api/validateiuc?smart_card_number=${iuc}& &cablename=${id}`,
-          {
-            headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
-            },
-          },
-        ),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async validateMeter(id: string): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get('https://datastationapi.com/api/data/', {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
+        this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: error.message,
           },
         }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async airtimeToCash(data: AirTime2CastDto): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post(
-          'https://datastationapi.com/api/Airtime_funding',
-          data,
-          {
-            headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
-            },
-          },
-        ),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async electricityBillPayment(data: ElectricityPaymentDto): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post(
-          'https://datastationapi.com/api/cablesub/',
-          data,
-          {
-            headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
-            },
-          },
-        ),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async buyResultCheckerPin(data: ExamPinPurchaseDto): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/epin/', data, {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async generateRechargePin(data: CardPurchaseDto): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post(
-          'https://datastationapi.com/api/rechargepin',
-          data,
-          {
-            headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
-            },
-          },
-        ),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
-
-      throw error;
-    }
-  }
-
-  async buyAirtime(data: AirtimePurchaseDto): Promise<any> {
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post('https://datastationapi.com/api/topup', data, {
-          headers: {
-            Authorization: `Token ${process.env.DataStation_API_KEY}`,
-          },
-        }),
-      );
-      console.log('Response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('DataStation API Error:', {
-        message: error?.message,
-        responseData: error?.response?.data,
-        status: error?.response?.status,
-        stack: error?.stack,
-      });
+      ]);
 
       throw error;
     }

@@ -8,18 +8,13 @@ import {
   Res,
 } from '@nestjs/common';
 import { DataService } from './data.service';
-import { CreateOrUpdateDataPriceDto } from './dto/data.dto';
+
 import { Response, Request } from 'express';
-import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
+import { DataDto, UpdataDataDto } from './dto/data.dto';
 
 @Controller('data')
 export class DataController {
   constructor(private readonly dataService: DataService) {}
-
-  @Get('init')
-  async initializeDataPrice() {
-    return this.dataService.initailDataPrice();
-  }
 
   @Get('sync')
   async syncDataPrice() {
@@ -32,8 +27,8 @@ export class DataController {
   }
 
   @Post('update')
-  async updateDataPrice(data: CreateOrUpdateDataPriceDto) {
-    const result = await this.dataService.createOrUpdateDataPlan(data);
+  async updateDataPrice(data: UpdataDataDto) {
+    const result = await this.dataService.updateDataPlan(data);
     return {
       message: 'Plan saved successfully',
       result,
@@ -42,7 +37,7 @@ export class DataController {
 
   @Post('buy')
   async buyDataPlan(
-    @Body() data: DataStationDto,
+    @Body() data: DataDto,
     @Req() request: Request,
     @Res() res: Response,
   ) {

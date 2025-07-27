@@ -82,8 +82,8 @@ export class UserService {
     return userData;
   }
 
-  async updateUser(email: string, data: UpdateUserDto) {
-    const user = await this.prisma.user.findFirst({ where: { email: email } });
+  async updateUser(sub: string, data: UpdateUserDto) {
+    const user = await this.prisma.user.findFirst({ where: { id: sub } });
 
     if (!user) {
       throw new NotFoundException();
