@@ -50,8 +50,6 @@ export class DataController {
         data: response,
       });
     } catch (error) {
-      console.error('Buy Data Plan Error:', error);
-
       const statusCode =
         error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
 

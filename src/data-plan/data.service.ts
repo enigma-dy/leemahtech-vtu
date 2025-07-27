@@ -164,7 +164,7 @@ export class DataService {
         planName: plan.plan_type,
         Ported_number: true,
       };
-      console.log('Buying data for husmod....');
+
       return await this.husmodService.buyData(userId, data, plan.selling_price);
     } else if (plan.provider === 'datastation') {
       const data: DataStationDto = {
@@ -176,7 +176,7 @@ export class DataService {
         planName: plan.plan_type,
         Ported_number: true,
       };
-      console.log('Buying data for husmod....');
+
       return await this.dataStationService.buyData(
         userId,
         data,

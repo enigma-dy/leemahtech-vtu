@@ -104,8 +104,6 @@ export class HusmodService {
       include: { wallet: true },
     });
 
-    console.log(user?.wallet.balance, selling_price);
-
     if (
       !user ||
       !user.wallet ||
@@ -169,43 +167,51 @@ export class HusmodService {
 
       const response = await firstValueFrom(
         this.httpService.post(
-          'https://husmodataapi.com/api/data',
-          payloadToSend,
+          'https://husmodataapi.com/api/data/',
+          {
+            network: data.network,
+            mobile_number: data.mobile_number,
+            plan: data.plan,
+            Ported_number: data.Ported_number,
+          },
           {
             headers: {
-              Authorization: `Token ${process.env.DataStation_API_KEY}`,
+              Authorization: `Token ${process.env.HUSMOD_API_KEY}`,
+              'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      //Update transaction and data purchase
-      await Promise.all([
-        this.prisma.dataPurchase.update({
-          where: { id: dataPurchase.id },
-          data: {
-            status: 'SUCCESS',
-            response: response.data,
-          },
-        }),
-        this.prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'SUCCESS',
-            completedAt: new Date(),
-          },
-        }),
-      ]);
+      // //Update transaction and data purchase
+      // await Promise.all([
+      //   this.prisma.dataPurchase.update({
+      //     where: { id: dataPurchase.id },
+      //     data: {
+      //       status: 'SUCCESS',
+      //       response: response.data,
+      //     },
+      //   }),
+      //   this.prisma.transaction.update({
+      //     where: { id: transaction.id },
+      //     data: {
+      //       status: 'SUCCESS',
+      //       completedAt: new Date(),
+      //     },
+      //   }),
+      // ]);
 
       return response.data;
     } catch (error) {
-      // Step 7: On Failure, update transaction and data purchase
+      const errorResponse = error?.response?.data || { message: error.message };
+
+      // Update DB records
       await Promise.all([
         this.prisma.dataPurchase.update({
           where: { id: dataPurchase.id },
           data: {
             status: 'FAILED',
-            response: error?.response?.data || { message: error.message },
+            response: errorResponse,
           },
         }),
         this.prisma.transaction.update({
@@ -217,7 +223,12 @@ export class HusmodService {
         }),
       ]);
 
-      throw error;
+      // Throw a sanitized error to avoid dumping Axios internals
+      throw new Error(
+        errorResponse?.error?.[0] ||
+          errorResponse?.message ||
+          'Data purchase failed',
+      );
     }
   }
 
