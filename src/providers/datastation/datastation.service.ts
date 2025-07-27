@@ -97,11 +97,15 @@ export class DataStationService {
       include: { wallet: true },
     });
 
-    if (!user || !user.wallet || user.wallet.balance < selling_price) {
+    if (
+      !user ||
+      !user.wallet ||
+      user.wallet.balance.lt(new Decimal(selling_price))
+    ) {
       throw new Error('Insufficient wallet balance');
     }
 
-    // Step 1: Create Ledger
+    // Create Ledger
     const ledger = await this.prisma.ledger.create({
       data: {
         description: `Buy Data - ${data.plan}`,
@@ -109,7 +113,7 @@ export class DataStationService {
       },
     });
 
-    // Step 2: Debit Wallet Entry
+    // Debit Wallet Entry
     await this.prisma.entry.create({
       data: {
         walletId: user.wallet.id,
@@ -119,7 +123,7 @@ export class DataStationService {
       },
     });
 
-    // Step 3: Create Transaction
+    // Create Transaction
     const transaction = await this.prisma.transaction.create({
       data: {
         txRef: `TX-${Date.now()}`,
@@ -132,7 +136,7 @@ export class DataStationService {
       },
     });
 
-    // Step 4: Create DataPurchase Record
+    //Create DataPurchase Record
     const dataPurchase = await this.prisma.dataPurchase.create({
       data: {
         userId,
@@ -145,27 +149,27 @@ export class DataStationService {
       },
     });
 
+    // Call the API
     try {
-      const payloadToSend = {
-        network: data.network,
-        mobile_number: data.mobile_number,
-        plan: data.plan,
-        Ported_number: data.Ported_number,
-      };
-
       const response = await firstValueFrom(
         this.httpService.post(
           'https://datastationapi.com/api/data/',
-          payloadToSend,
+          {
+            network: data.network,
+            mobile_number: data.mobile_number,
+            plan: data.plan,
+            Ported_number: data.Ported_number,
+          },
           {
             headers: {
               Authorization: `Token ${process.env.DataStation_API_KEY}`,
+              'Content-Type': 'application/json',
             },
           },
         ),
       );
 
-      // Step 6: On Success, update transaction and data purchase
+      //Update transaction and data purchase
       await Promise.all([
         this.prisma.dataPurchase.update({
           where: { id: dataPurchase.id },
@@ -185,13 +189,15 @@ export class DataStationService {
 
       return response.data;
     } catch (error) {
-      // Step 7: On Failure, update transaction and data purchase
+      const errorResponse = error?.response?.data || { message: error.message };
+
+      // Update DB records
       await Promise.all([
         this.prisma.dataPurchase.update({
           where: { id: dataPurchase.id },
           data: {
             status: 'FAILED',
-            response: error?.response?.data || { message: error.message },
+            response: errorResponse,
           },
         }),
         this.prisma.transaction.update({
@@ -203,7 +209,12 @@ export class DataStationService {
         }),
       ]);
 
-      throw error;
+      // Throw a sanitized error to avoid dumping Axios internals
+      throw new Error(
+        errorResponse?.error?.[0] ||
+          errorResponse?.message ||
+          'Data purchase failed',
+      );
     }
   }
 }
