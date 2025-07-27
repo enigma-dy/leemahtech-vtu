@@ -169,6 +169,7 @@ export class DataStationService {
         ),
       );
 
+      console.log('secondhere');
       //Update transaction and data purchase
       await Promise.all([
         this.prisma.dataPurchase.update({

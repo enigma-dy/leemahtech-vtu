@@ -72,8 +72,7 @@ export class HusmodService {
       };
     } catch (error) {
       const message =
-        error?.response?.data?.message ||
-        'Error fetching data from DataStation';
+        error?.response?.data?.message || 'Error fetching data from Husmod';
       const status = error?.response?.status || 500;
       throw new InternalServerErrorException({ status, message });
     }
@@ -91,8 +90,7 @@ export class HusmodService {
       return response.data;
     } catch (error) {
       const message =
-        error?.response?.data?.message ||
-        'Error fetching data from DataStation';
+        error?.response?.data?.message || 'Error fetching data from Husmod';
       const status = error?.response?.status || 500;
       throw new InternalServerErrorException({ status, message });
     }
@@ -139,7 +137,7 @@ export class HusmodService {
         walletId: user.wallet.id,
         status: 'PENDING',
         channel: 'App',
-        provider: 'datastation',
+        provider: 'husmod',
       },
     });
 
@@ -158,13 +156,6 @@ export class HusmodService {
 
     // Call the API
     try {
-      const payloadToSend = {
-        network: data.network,
-        mobile_number: data.mobile_number,
-        plan: data.plan,
-        Ported_number: data.Ported_number,
-      };
-
       const response = await firstValueFrom(
         this.httpService.post(
           'https://husmodataapi.com/api/data/',
@@ -184,22 +175,22 @@ export class HusmodService {
       );
 
       // //Update transaction and data purchase
-      // await Promise.all([
-      //   this.prisma.dataPurchase.update({
-      //     where: { id: dataPurchase.id },
-      //     data: {
-      //       status: 'SUCCESS',
-      //       response: response.data,
-      //     },
-      //   }),
-      //   this.prisma.transaction.update({
-      //     where: { id: transaction.id },
-      //     data: {
-      //       status: 'SUCCESS',
-      //       completedAt: new Date(),
-      //     },
-      //   }),
-      // ]);
+      await Promise.all([
+        this.prisma.dataPurchase.update({
+          where: { id: dataPurchase.id },
+          data: {
+            status: 'SUCCESS',
+            response: response.data,
+          },
+        }),
+        this.prisma.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: 'SUCCESS',
+            completedAt: new Date(),
+          },
+        }),
+      ]);
 
       return response.data;
     } catch (error) {
@@ -244,7 +235,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -267,7 +258,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmond API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -290,7 +281,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -313,7 +304,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -339,7 +330,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -362,7 +353,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -389,7 +380,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -412,7 +403,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -435,7 +426,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -462,7 +453,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
@@ -485,7 +476,7 @@ export class HusmodService {
       console.log('Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('DataStation API Error:', {
+      console.error('Husmod API Error:', {
         message: error?.message,
         responseData: error?.response?.data,
         status: error?.response?.status,
