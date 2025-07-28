@@ -5,9 +5,15 @@ import { OpayController } from './opay.controller';
 import { WalletModule } from 'src/wallet/wallet.module';
 import { UserService } from 'src/user/user.service';
 import { UserModule } from 'src/user/user.module';
+import { EmailModule } from 'src/email/mailer.module';
 
 @Module({
-  imports: [HttpModule, UserModule, forwardRef(() => WalletModule)],
+  imports: [
+    HttpModule,
+    UserModule,
+    EmailModule,
+    forwardRef(() => WalletModule),
+  ],
   providers: [OpayService],
   controllers: [OpayController],
   exports: [OpayService],

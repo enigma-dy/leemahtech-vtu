@@ -16,4 +16,21 @@ export class EmailService {
       },
     });
   }
+  async sendOpayReciept(
+    to: string,
+    name: string,
+    amount: number,
+    txRef: string,
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Wallet Top-Up Initiated',
+      template: 'account-funding',
+      context: {
+        name,
+        amount,
+        txRef,
+      },
+    });
+  }
 }

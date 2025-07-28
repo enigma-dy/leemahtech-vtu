@@ -7,12 +7,18 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/db/prisma.service';
+
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { User } from 'generated/prisma';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmailEvent } from 'src/email/events/mail.event';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async createUser(data: CreateUserDto): Promise<Omit<User, 'password'>> {
     const { passwordConfirm, password, ...userData } = data;
@@ -51,6 +57,10 @@ export class UserService {
         });
         const { password: _, ...data } = user;
 
+        this.eventEmitter.emit(
+          'user.created',
+          new EmailEvent(user.email!, user.fullName!),
+        );
         return data;
       });
     } catch (error) {

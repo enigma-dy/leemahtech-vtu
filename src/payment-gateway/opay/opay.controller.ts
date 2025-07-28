@@ -1,6 +1,8 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
+
 import { v4 as uuidv4 } from 'uuid';
 import { OpayPaymentRequest, OpayStatusRequest } from './dto/opay.dto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { OpayService } from './opay.service';
 import { Public } from 'src/decorators/auth.decorator';
 import { WalletService } from 'src/wallet/wallet.service';
@@ -9,6 +11,7 @@ import { Decimal } from 'generated/prisma/runtime/library';
 import { WalletDto } from 'src/wallet/dto/wallet.dto';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
+import { OpayEvent } from 'src/email/events/mail.event';
 
 @Controller('opay')
 export class OpayController {
@@ -18,6 +21,7 @@ export class OpayController {
     private readonly walletService: WalletService,
     private readonly userService: UserService,
     private readonly configService: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Post('credit')
@@ -85,6 +89,9 @@ export class OpayController {
 
     const existingPayment = await this.prisma.transaction.findUnique({
       where: { txRef: statusResult.reference },
+      include: {
+        user: true,
+      },
     });
 
     if (!existingPayment) {
@@ -111,6 +118,15 @@ export class OpayController {
         },
       });
 
+      this.eventEmitter.emit(
+        'OpayFunding',
+        new OpayEvent(
+          existingPayment.user.email!,
+          existingPayment.user.fullName!,
+          Number(statusResult.amount) / 100,
+          statusResult.reference,
+        ),
+      );
       return { message: 'Wallet credited successfully' };
     } else {
       await this.prisma.transaction.update({
