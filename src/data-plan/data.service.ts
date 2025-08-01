@@ -7,7 +7,7 @@ import { Decimal } from 'generated/prisma/runtime/library';
 import { CreateUnifiedPlanDto, DataDto, UpdataDataDto } from './dto/data.dto';
 import { HusmodService } from 'src/providers/husmod/husmod.service';
 import { DataStationService } from 'src/providers/datastation/datastation.service';
-import { ProviderSettingService } from 'src/providers/provider.service';
+import { ProviderService } from 'src/providers/provider.service';
 import { SmeProvider } from 'src/providers/dto/provider.dto';
 import * as fs from 'fs';
 
@@ -30,7 +30,7 @@ export class DataService {
     private readonly leemahService: LeemahService,
     private readonly husmodService: HusmodService,
     private readonly dataStationService: DataStationService,
-    private readonly activeProvider: ProviderSettingService,
+    private readonly activeProvider: ProviderService,
   ) {}
 
   async getAllDataPlans() {
@@ -153,6 +153,8 @@ export class DataService {
         message: 'Data plan not found',
       };
     }
+
+    console.log(plan);
 
     if (plan.provider === 'husmodata') {
       const data: HusmodDataDto = {

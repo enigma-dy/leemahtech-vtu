@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Bill Payment Receipt</title>
+  </head>
+  <body
+    style="
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    "
+  >
+    <div
+      style="
+        max-width: 600px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin: auto;
+      "
+    >
+      <h2>Hello <%= name %>,</h2>
+      <p>Your electricity bill payment was successful.</p>
+      <ul>
+        <li>Disco: <strong><%= disco %></strong></li>
+        <li>Meter Number: <strong><%= meterNumber %></strong></li>
+        <li>Amount: <strong>₦<%= amount %></strong></li>
+        <li>Transaction Ref: <strong><%= txRef %></strong></li>
+      </ul>
+      <p>Thank you for your payment.</p>
+    </div>
+  </body>
+</html>

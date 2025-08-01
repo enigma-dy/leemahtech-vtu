@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
-import { ProviderSettingService } from './provider.service';
+import { ProviderService } from './provider.service';
 import { SmeProviderController } from './provider.controller';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
+  imports: [HttpModule],
   controllers: [SmeProviderController],
-  providers: [ProviderSettingService],
-  exports: [ProviderSettingService],
+  providers: [ProviderService],
+  exports: [ProviderService],
 })
 export class SmeProviderModule {}

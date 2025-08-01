@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Airtime Purchase Receipt</title>
+  </head>
+  <body
+    style="
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      padding: 20px;
+    "
+  >
+    <div
+      style="
+        max-width: 600px;
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        margin: auto;
+      "
+    >
+      <h2>Hello <%= name %>,</h2>
+      <p>You have successfully purchased airtime.</p>
+      <ul>
+        <li>Amount: <strong>₦<%= amount %></strong></li>
+        <li>Phone Number: <strong><%= phone %></strong></li>
+        <li>Transaction Ref: <strong><%= txRef %></strong></li>
+      </ul>
+      <p>Thanks for using our service.</p>
+    </div>
+  </body>
+</html>
