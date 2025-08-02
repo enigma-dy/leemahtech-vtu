@@ -1,4 +1,11 @@
-import { Body, HttpStatus, Injectable, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
 import { LeemahService } from 'src/providers/leemah/leemah.service';
 import { Prisma } from '@prisma/client';
@@ -9,19 +16,12 @@ import { HusmodService } from 'src/providers/husmod/husmod.service';
 import { DataStationService } from 'src/providers/datastation/datastation.service';
 import { ProviderService } from 'src/providers/provider.service';
 import { SmeProvider } from 'src/providers/dto/provider.dto';
-import * as fs from 'fs';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
 import { HusmodDataDto } from 'src/providers/husmod/dto/husmod.dto';
-
-const logToFile = (message: string) => {
-  const logEntry = `${new Date().toISOString()} - ${message}\n`;
-  try {
-    fs.appendFileSync('debug.log', logEntry);
-  } catch (err) {
-    console.error('Failed to write to log file:', err);
-  }
-};
+import { DataPurchaseEvent } from 'src/email/events/mail.event';
+import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class DataService {
@@ -31,6 +31,7 @@ export class DataService {
     private readonly husmodService: HusmodService,
     private readonly dataStationService: DataStationService,
     private readonly activeProvider: ProviderService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getAllDataPlans() {
@@ -146,45 +147,64 @@ export class DataService {
       where: { id: data.id },
     });
 
-    const recieptient = data.mobileNumber;
+    const recipient = data.mobileNumber;
     if (!plan) {
-      return {
-        success: false,
-        message: 'Data plan not found',
-      };
+      return { success: false, message: 'Data plan not found' };
     }
 
+    let purchaseResult;
     if (plan.provider === 'husmodata') {
-      const data: HusmodDataDto = {
-        network: plan.network_id.toString(),
-        mobile_number: recieptient,
-        plan: plan.data_plan_id,
-        planSize: plan.plan_size,
-        planVolume: plan.plan_size,
-        planName: plan.plan_type,
-        Ported_number: true,
-      };
-
-      return await this.husmodService.buyData(userId, data, plan.selling_price);
-    } else if (plan.provider === 'datastation') {
-      const data: DataStationDto = {
-        network: plan.network_id.toString(),
-        mobile_number: recieptient,
-        plan: plan.data_plan_id,
-        planSize: plan.plan_size,
-        planVolume: plan.plan_size,
-        planName: plan.plan_type,
-        Ported_number: true,
-      };
-
-      return await this.dataStationService.buyData(
+      purchaseResult = await this.husmodService.buyData(
         userId,
-        data,
+        {
+          network: plan.network_id.toString(),
+          mobile_number: recipient,
+          plan: plan.data_plan_id,
+          planSize: plan.plan_size,
+          planVolume: plan.plan_size,
+          planName: plan.plan_type,
+          Ported_number: true,
+        },
         plan.selling_price,
       );
-    } else {
-      return;
+    } else if (plan.provider === 'datastation') {
+      purchaseResult = await this.dataStationService.buyData(
+        userId,
+        {
+          network: plan.network_id.toString(),
+          mobile_number: recipient,
+          plan: plan.data_plan_id,
+          planSize: plan.plan_size,
+          planVolume: plan.plan_size,
+          planName: plan.plan_type,
+          Ported_number: true,
+        },
+        plan.selling_price,
+      );
     }
+
+    if (purchaseResult?.success) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+      if (!user) {
+        throw new NotFoundException();
+      }
+      this.eventEmitter.emit(
+        'data.purchase',
+        new DataPurchaseEvent(
+          user.email!,
+          user.fullName!,
+          plan.network_name,
+          plan.plan_type,
+          plan.plan_size,
+          recipient,
+          plan.selling_price,
+          purchaseResult.txRef || purchaseResult.transactionId,
+        ),
+      );
+    }
+
+    return purchaseResult;
   }
 
   async updateDataPlan(data: UpdataDataDto) {

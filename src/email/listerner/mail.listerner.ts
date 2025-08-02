@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EmailService } from '../mail.service';
-import { EmailEvent, OpayEvent } from '../events/mail.event';
+import { DataPurchaseEvent, EmailEvent, OpayEvent } from '../events/mail.event';
 import { name } from 'ejs';
 
 @Injectable()
@@ -18,6 +18,20 @@ export class UserCreatedListener {
     await this.emailService.sendOpayReciept(
       event.to,
       event.name,
+      event.amount,
+      event.txRef,
+    );
+  }
+
+  @OnEvent('data.purchase')
+  async handleDataPurchase(event: DataPurchaseEvent) {
+    await this.emailService.sendDataPurchaseReceipt(
+      event.to,
+      event.name,
+      event.network,
+      event.planName,
+      event.planSize,
+      event.phone,
       event.amount,
       event.txRef,
     );

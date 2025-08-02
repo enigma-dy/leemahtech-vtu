@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { Decimal } from 'generated/prisma/runtime/library';
 
 @Injectable()
 export class EmailService {
@@ -111,6 +112,24 @@ export class EmailService {
       subject: 'Exam PIN Purchase Receipt',
       template: 'exam-pin',
       context: { name, examName, pins, amount, txRef },
+    });
+  }
+
+  async sendDataPurchaseReceipt(
+    to: string,
+    name: string,
+    network: string,
+    planName: string,
+    planSize: string,
+    phone: string,
+    amount: Decimal,
+    txRef: string,
+  ) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Data Purchase Receipt',
+      template: 'data-purchase',
+      context: { name, network, planName, planSize, phone, amount, txRef },
     });
   }
 }
