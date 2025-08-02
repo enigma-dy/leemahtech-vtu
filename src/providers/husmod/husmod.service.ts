@@ -110,38 +110,6 @@ export class HusmodService {
       throw new Error('Insufficient wallet balance');
     }
 
-    // Create Ledger
-    const ledger = await this.prisma.ledger.create({
-      data: {
-        description: `Buy Data - ${data.plan}`,
-        createdBy: userId,
-      },
-    });
-
-    // Debit Wallet Entry
-    await this.prisma.entry.create({
-      data: {
-        walletId: user.wallet.id,
-        ledgerId: ledger.id,
-        amount: selling_price,
-        type: 'DEBIT',
-      },
-    });
-
-    // Create Transaction
-    const transaction = await this.prisma.transaction.create({
-      data: {
-        txRef: `TX-${Date.now()}`,
-        userId,
-        amount: selling_price,
-        walletId: user.wallet.id,
-        status: 'PENDING',
-        channel: 'App',
-        provider: 'husmod',
-      },
-    });
-
-    //Create DataPurchase Record
     const dataPurchase = await this.prisma.dataPurchase.create({
       data: {
         userId,
@@ -154,7 +122,6 @@ export class HusmodService {
       },
     });
 
-    // Call the API
     try {
       const response = await firstValueFrom(
         this.httpService.post(
@@ -174,47 +141,64 @@ export class HusmodService {
         ),
       );
 
-      // //Update transaction and data purchase
-      await Promise.all([
-        this.prisma.dataPurchase.update({
-          where: { id: dataPurchase.id },
-          data: {
-            status: 'SUCCESS',
-            response: response.data,
+      await this.prisma.wallet.update({
+        where: { id: user.wallet.id },
+        data: {
+          balance: {
+            decrement: selling_price,
           },
-        }),
-        this.prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'SUCCESS',
-            completedAt: new Date(),
-          },
-        }),
-      ]);
+        },
+      });
+
+      const ledger = await this.prisma.ledger.create({
+        data: {
+          description: `Buy Data - ${data.plan}`,
+          createdBy: userId,
+        },
+      });
+
+      await this.prisma.entry.create({
+        data: {
+          walletId: user.wallet.id,
+          ledgerId: ledger.id,
+          amount: selling_price,
+          type: 'DEBIT',
+        },
+      });
+
+      await this.prisma.transaction.create({
+        data: {
+          txRef: `TX-${Date.now()}`,
+          userId,
+          amount: selling_price,
+          walletId: user.wallet.id,
+          status: 'SUCCESS',
+          channel: 'App',
+          provider: 'husmod',
+          completedAt: new Date(),
+        },
+      });
+
+      await this.prisma.dataPurchase.update({
+        where: { id: dataPurchase.id },
+        data: {
+          status: 'SUCCESS',
+          response: response.data,
+        },
+      });
 
       return response.data;
     } catch (error) {
       const errorResponse = error?.response?.data || { message: error.message };
 
-      // Update DB records
-      await Promise.all([
-        this.prisma.dataPurchase.update({
-          where: { id: dataPurchase.id },
-          data: {
-            status: 'FAILED',
-            response: errorResponse,
-          },
-        }),
-        this.prisma.transaction.update({
-          where: { id: transaction.id },
-          data: {
-            status: 'FAILED',
-            errorMessage: error.message,
-          },
-        }),
-      ]);
+      await this.prisma.dataPurchase.update({
+        where: { id: dataPurchase.id },
+        data: {
+          status: 'FAILED',
+          response: errorResponse,
+        },
+      });
 
-      // Throw a sanitized error to avoid dumping Axios internals
       throw new Error(
         errorResponse?.error?.[0] ||
           errorResponse?.message ||

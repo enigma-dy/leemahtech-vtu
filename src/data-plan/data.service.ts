@@ -154,8 +154,6 @@ export class DataService {
       };
     }
 
-    console.log(plan);
-
     if (plan.provider === 'husmodata') {
       const data: HusmodDataDto = {
         network: plan.network_id.toString(),
@@ -187,11 +185,6 @@ export class DataService {
     } else {
       return;
     }
-
-    return {
-      success: true,
-      data: plan,
-    };
   }
 
   async updateDataPlan(data: UpdataDataDto) {
