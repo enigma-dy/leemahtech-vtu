@@ -85,8 +85,8 @@ export class ExamPinPurchaseDto {
 
 export class CardPurchaseDto {
   @IsNotEmpty()
-  @IsString()
-  network: string;
+  @IsNumber()
+  network: number;
 
   @IsNotEmpty()
   @IsInt({ message: 'network_amount must be an integer' })

@@ -5,39 +5,66 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  NotFoundException,
 } from '@nestjs/common';
-
-import { SetSmeProviderDto } from './dto/provider.dto';
-import { ProviderService } from './provider.service';
+import { PrismaService } from 'src/db/prisma.service';
+import { HusmodService } from './husmod/husmod.service';
+import { SmeProvider } from 'generated/prisma';
+import { DataStationService } from './datastation/datastation.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Controller('sme-provider')
 export class SmeProviderController {
-  constructor(private readonly providerService: ProviderService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly husmodata: HusmodService,
+    private readonly datastation: DataStationService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  private async getActiveProvider(): Promise<SmeProvider> {
+    const setting = await this.prisma.providerSetting.findUnique({
+      where: { id: 1 },
+    });
+
+    if (!setting) throw new NotFoundException('Provider setting not found');
+
+    return setting.activeProvider;
+  }
 
   @Get('get')
   async getProvider() {
-    return await this.providerService.getActiveProvider();
+    return { provider: await this.getActiveProvider() };
   }
 
-  @Post('set-provider')
-  async setProvider(@Body() dto: SetSmeProviderDto) {
-    await this.providerService.setActiveProvider(dto);
-    return { message: `Active provider set to ${dto.provider}` };
-  }
-
-  // Send airtime
   @Post('airtime')
   async sendAirtime(
     @Body() body: { network_id: number; amount: number; phone: string },
   ) {
-    return await this.providerService.sendAirtime(
-      body.network_id,
-      body.amount,
-      body.phone,
-    );
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.buyAirtime({
+          network: body.network_id,
+          amount: body.amount,
+          mobile_number: body.phone,
+          Ported_number: false,
+          airtime_type: 'VTU',
+        });
+      case SmeProvider.datastation:
+        return this.datastation.buyAirtime({
+          network: body.network_id,
+          amount: body.amount,
+          mobile_number: body.phone,
+          Ported_number: false,
+          airtime_type: 'VTU',
+        });
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
-  // Bill payment
   @Post('bill')
   async sendBillPayment(
     @Body()
@@ -48,15 +75,18 @@ export class SmeProviderController {
       MeterType: number;
     },
   ) {
-    return await this.providerService.sendBillPayment(
-      body.disco_name,
-      body.amount,
-      body.meter_number,
-      body.MeterType,
-    );
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.electricityBillPayment(body);
+      case SmeProvider.datastation:
+        return this.datastation.electricityBillPayment(body);
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
-  // Cable subscription
   @Post('cable')
   async subscribeCable(
     @Body()
@@ -66,14 +96,18 @@ export class SmeProviderController {
       smart_card_number: string;
     },
   ) {
-    return await this.providerService.subscribeCable(
-      body.cablename,
-      body.cableplan,
-      body.smart_card_number,
-    );
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.queryCableSub(body.cablename.toString());
+      case SmeProvider.datastation:
+        return this.datastation.queryCableSub(body.cablename.toString());
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
-  // Buy recharge pin
   @Post('recharge-pin')
   async getRechargePin(
     @Body()
@@ -84,15 +118,18 @@ export class SmeProviderController {
       name_on_card: string;
     },
   ) {
-    return await this.providerService.getRechargePin(
-      body.network,
-      body.network_amount,
-      body.quantity,
-      body.name_on_card,
-    );
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.generateRechargePin(body);
+      case SmeProvider.datastation:
+        return this.datastation.generateRechargePin(body);
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
-  // Buy exam pin
   @Post('exam-pin')
   async getExamPin(
     @Body()
@@ -101,12 +138,29 @@ export class SmeProviderController {
       quantity: number;
     },
   ) {
-    return await this.providerService.getExamPin(body.exam_name, body.quantity);
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.buyResultCheckerPin(body);
+      case SmeProvider.datastation:
+        return this.datastation.buyResultCheckerPin(body);
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
-  // Query data plan by ID
   @Get('data/:id')
   async queryDataPlan(@Param('id', ParseIntPipe) id: number) {
-    return await this.providerService.queryDataPlan(id);
+    const provider = await this.getActiveProvider();
+
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata.queryDataTransaction(id.toString());
+      case SmeProvider.datastation:
+        return this.datastation.queryDataTransaction(id.toString());
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 }

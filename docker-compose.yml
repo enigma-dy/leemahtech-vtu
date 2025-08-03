@@ -1,0 +1,89 @@
+services:
+  nestjs:
+    build: .
+    container_name: Leemah
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: leemahDb
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+    command:
+      - '--storage.tsdb.retention.time=3d'
+      - '--storage.tsdb.path=/prometheus'
+    mem_limit: 512m
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - '3001:3000'
+    depends_on:
+      - prometheus
+      - loki
+    mem_limit: 300m
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/tmp/loki
+    mem_limit: 512m
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: promtail
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    mem_limit: 150m
+
+  backup:
+    image: rclone/rclone:latest
+    container_name: backup
+    volumes:
+      - ./backups:/backups
+      - ./rclone/rclone.conf:/config/rclone/rclone.conf
+      - loki-data:/loki-data:ro
+      - db-data:/db-data:ro
+    entrypoint: /bin/sh -c "chmod +x /backups/backup.sh && while true; do /backups/backup.sh; sleep 3600; done"
+    depends_on:
+      - loki
+      - db
+    mem_limit: 150m
+
+volumes:
+  loki-data:
+  db-data:

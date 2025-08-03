@@ -17,6 +17,11 @@ import { FlutterwaveModule } from './payment-gateway/flutter/flutter.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { VtuTelegramBotModule } from './telegram-bot/bot.module';
 import opayConfig from './payment-gateway/opay/config/opay.config';
+import { AdminModule } from './admin/admin.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './auth/auth.guard';
 
 @Module({
   imports: [
@@ -38,8 +43,26 @@ import opayConfig from './payment-gateway/opay/config/opay.config';
     OpayModule,
     VtuTelegramBotModule,
     EventEmitterModule.forRoot(),
+    AdminModule,
+    MetricsModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 30,
+      },
+    ]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
 })
 export class AppModule {}

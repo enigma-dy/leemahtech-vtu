@@ -110,13 +110,4 @@ export class WalletService {
     }
     return user.wallet.balance;
   }
-
-  // async getProviderBalance() {
-  //   const dataStationBal =
-  //     await this.dataStationService.getMyDataStationDetails();
-
-  //   const husmodBal = await this.husmodSevice.getMyHusmodDetails();
-
-  //   return { dataStationBal, husmodBal };
-  // }
 }

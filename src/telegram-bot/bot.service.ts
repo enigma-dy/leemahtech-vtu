@@ -17,6 +17,8 @@ export class VtuTelegramBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(VtuTelegramBotService.name);
   private bot: Telegraf<BotContext>;
 
+  public appRef: any;
+
   constructor(
     private readonly userHandler: UserHandler,
     private readonly walletHandler: WalletHandler,
@@ -28,66 +30,89 @@ export class VtuTelegramBotService implements OnModuleInit, OnModuleDestroy {
     const token = process.env.TG_BOT_TOKEN;
     if (!token) throw new Error('TG_BOT_TOKEN not set');
 
+    const mode = process.env.BOT_MODE || 'webhook';
+    const publicUrl = process.env.PUBLIC_URL;
     const agent = new https.Agent({ keepAlive: true });
     this.bot = new Telegraf<BotContext>(token, { telegram: { agent } });
 
-    // Scenes setup
+    // Scenes
     const buyDataScene = this.dataPurchaseHandler.getScene();
     const stage = new Scenes.Stage<BotContext>([buyDataScene], {});
     this.bot.use(session());
     this.bot.use(stage.middleware());
 
-    // Register handlers
+    //handlers
     this.userHandler.register(this.bot);
     this.walletHandler.register(this.bot);
     this.dataPurchaseHandler.register(this.bot);
     this.uiHandler.register(this.bot);
 
-    // Catch all bot errors
     this.bot.catch((err: unknown, ctx) => {
       const error = err as Error;
-      console.log(
-        `Bot error on ${ctx.updateType}`,
+      console.error(
+        `Bot error on ${ctx?.updateType}`,
         error.stack || error.message,
       );
     });
 
-    // Catch polling/network errors
-    (this.bot as any).on('polling_error', (err: unknown) => {
-      const error = err as Error;
-      console.error(`Polling error: ${error.message}`);
-    });
-    // Handle unhandled rejections so Node doesn't crash
     process.on('unhandledRejection', (reason) => {
-      console.log(`Unhandled Rejection: ${reason}`);
+      console.error(`Unhandled Rejection: ${reason}`);
     });
 
     process.on('uncaughtException', (err) => {
-      console.log(`Uncaught Exception: ${err.message}`, err.stack);
+      console.error(`Uncaught Exception: ${err.message}`, err.stack);
     });
 
-    await this.launchWithRetries();
+    if (mode === 'webhook' && publicUrl) {
+      await this.startWebhookMode(publicUrl);
+    } else {
+      await this.launchWithRetries();
+    }
 
     this.setupGracefulShutdown();
+  }
+
+  private async startWebhookMode(publicUrl: string) {
+    const webhookPath = `/bot${process.env.TG_BOT_TOKEN}`;
+    const webhookUrl = `${publicUrl}${webhookPath}`;
+
+    try {
+      await this.bot.telegram.setWebhook(webhookUrl);
+      this.logger.log(`Webhook set successfully: ${webhookUrl}`);
+    } catch (err) {
+      this.logger.error(
+        `Failed to set webhook: ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+    }
+
+    if (!this.appRef) {
+      throw new Error(
+        'appRef is not set. Pass Nest app instance from main.ts for webhook mode.',
+      );
+    }
+    this.appRef.use(this.bot.webhookCallback(webhookPath));
+
+    this.logger.log(`🚀 VTU Bot started in WEBHOOK mode at: ${webhookUrl}`);
   }
 
   private async launchWithRetries(retries = 5, delayMs = 5000) {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         await this.bot.launch();
-        this.logger.log('🚀 VTU Bot started with polling');
+        this.logger.log('🚀 VTU Bot started with POLLING');
         return;
       } catch (err) {
-        this.logger.error(`Launch attempt ${attempt} failed: ${err.message}`);
+        this.logger.error(
+          `Launch attempt ${attempt} failed: ${(err as Error).message}`,
+        );
         if (attempt < retries) {
           this.logger.log(`Retrying in ${delayMs / 1000} seconds...`);
           await new Promise((res) => setTimeout(res, delayMs));
         }
       }
     }
-    this.logger.error(
-      'Max retries reached. Bot not started. App will keep running.',
-    );
+    this.logger.error('Max retries reached. Bot not started.');
   }
 
   onModuleDestroy() {

@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios';
+
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
-
 import {
   AirTime2CastDto,
   AirtimePurchaseDto,
@@ -16,13 +16,15 @@ import { Amount } from 'src/payment-gateway/opay/dto/opay.dto';
 import { PrismaService } from 'src/db/prisma.service';
 import { DataDto } from 'src/data-plan/dto/data.dto';
 import { Decimal } from 'generated/prisma/runtime/library';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { DataPurchaseEvent } from 'src/email/events/mail.event';
 
 @Injectable()
 export class HusmodService {
   constructor(
     private readonly httpService: HttpService,
-    private readonly walletService: WalletService,
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getMyHusmodDetails(): Promise<any> {
@@ -166,9 +168,11 @@ export class HusmodService {
         },
       });
 
+      const txRef = `TX-${Date.now()}`;
+
       await this.prisma.transaction.create({
         data: {
-          txRef: `TX-${Date.now()}`,
+          txRef,
           userId,
           amount: selling_price,
           walletId: user.wallet.id,
@@ -186,7 +190,19 @@ export class HusmodService {
           response: response.data,
         },
       });
-
+      this.eventEmitter.emit(
+        'data.purchase',
+        new DataPurchaseEvent(
+          user.email!,
+          user.fullName!,
+          String(data.network),
+          data.plan,
+          data.planSize,
+          data.mobile_number,
+          selling_price,
+          txRef!,
+        ),
+      );
       return response.data;
     } catch (error) {
       const errorResponse = error?.response?.data || { message: error.message };
