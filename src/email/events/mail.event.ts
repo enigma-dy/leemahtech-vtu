@@ -4,6 +4,7 @@ export class EmailEvent {
   constructor(
     public readonly email: string,
     public readonly name: string,
+    public readonly meta?: Record<string, any>,
   ) {}
 }
 

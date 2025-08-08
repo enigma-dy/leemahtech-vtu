@@ -102,8 +102,6 @@ export class OpayController {
       return { message: 'Payment already processed' };
     }
 
-    console.log(statusResult.amount);
-
     if (statusResult.status === 'SUCCESS') {
       await this.walletService.creditWallet(
         existingPayment.userId,

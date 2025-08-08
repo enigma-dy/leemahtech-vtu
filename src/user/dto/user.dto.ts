@@ -1,4 +1,6 @@
-import { IsNumber, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Role } from 'generated/prisma';
 
 export class CreateUserDto {
   @IsString()
@@ -21,6 +23,15 @@ export class CreateUserDto {
 
   @IsString()
   address: string;
+
+  @IsString()
+  @IsOptional()
+  referralCode: string;
+
+  @IsOptional()
+  @IsEnum(Role)
+  @Transform(({ value }) => value ?? Role.user)
+  role?: Role;
 }
 
 export class UpdateUserDto {

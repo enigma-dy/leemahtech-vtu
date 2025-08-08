@@ -8,6 +8,7 @@ import { VtuTelegramBotService } from './telegram-bot/bot.service';
 import { MetricsService } from './metrics/metrics.service';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
@@ -29,6 +30,15 @@ async function bootstrap() {
 
   app.use(helmet());
   app.enableCors();
+
+  const config = new DocumentBuilder()
+    .setTitle('Leemah API')
+    .setDescription('API description')
+    .setVersion('1.0')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }
