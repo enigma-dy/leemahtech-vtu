@@ -1,16 +1,15 @@
+import { apiReference } from '@scalar/nestjs-api-reference';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { json } from 'body-parser';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { VtuTelegramBotService } from './telegram-bot/bot.service';
-import { MetricsService } from './metrics/metrics.service';
-import { MetricsInterceptor } from './metrics/metrics.interceptor';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+
   app.useGlobalFilters(new AllExceptionsFilter());
 
   const botService = app.get(VtuTelegramBotService);
@@ -21,15 +20,59 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      // disableErrorMessages: process.env.NODE_ENV === 'production',
     }),
   );
-  const metricsService = app.get(MetricsService);
-  app.useGlobalInterceptors(new MetricsInterceptor(metricsService));
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+          'script-src': [
+            "'self'",
+            "'unsafe-inline'",
+            'https://cdn.jsdelivr.net',
+          ],
+          'img-src': ["'self'", 'data:', 'https://*'],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   app.enableCors();
 
-  await app.listen(process.env.PORT ?? 3000);
+  const config = new DocumentBuilder()
+    .setTitle('CampuxMart')
+    .setDescription('API for managing users, vtu, notifications, and templates')
+    .setVersion('1.0.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', in: 'header' },
+      'JWT',
+    )
+    .addTag('auth', 'Authentication endpoints')
+    .addTag('user', 'User management endpoints')
+    .addTag('notifications', 'Notification sending endpoints')
+    .addTag('templates', 'Template management endpoints')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
+  app.use(
+    '/api-doc',
+    apiReference({
+      content: document,
+      theme: 'purple',
+      spec: {
+        title: 'Leemah API Reference',
+        description: 'API documentation for the VTU platform',
+      },
+    }),
+  );
+
+  await app.listen(process.env.PORT ?? 5000);
 }
 bootstrap();

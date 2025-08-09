@@ -18,7 +18,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { VtuTelegramBotModule } from './telegram-bot/bot.module';
 import opayConfig from './payment-gateway/opay/config/opay.config';
 import { AdminModule } from './admin/admin.module';
-import { MetricsModule } from './metrics/metrics.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/auth.guard';
@@ -49,7 +48,6 @@ import { join } from 'path';
     VtuTelegramBotModule,
     EventEmitterModule.forRoot(),
     AdminModule,
-    MetricsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

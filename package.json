@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-    "@nestjs-modules/mailer": "^1.6.1",
+    "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
@@ -32,6 +32,7 @@
     "@nestjs/swagger": "^11.2.0",
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^6.13.0",
+    "@scalar/nestjs-api-reference": "^0.5.12",
     "@stoplight/elements": "^7.3.9",
     "@types/ejs": "^3.1.5",
     "@willsoto/nestjs-prometheus": "^6.0.2",
