@@ -10,9 +10,10 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from 'src/db/prisma.service';
 
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { User } from 'generated/prisma';
+
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events/mail.event';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -86,21 +87,21 @@ export class UserService {
         }
 
         //Referral Reward
-        if (referredBy) {
-          await prisma.referralReward.create({
-            data: {
-              userId: referredBy.id,
-              amount: 100,
-              description: `Referral bonus for user ${user.email}`,
-            },
-          });
-          await prisma.user.update({
-            where: { id: referredBy.id },
-            data: {
-              cashbackBalance: { increment: 100 },
-            },
-          });
-        }
+        // if (referredBy) {
+        //   await prisma.referralReward.create({
+        //     data: {
+        //       userId: referredBy.id,
+        //       amount: 100,
+        //       description: `Referral bonus for user ${user.email}`,
+        //     },
+        //   });
+        //   await prisma.user.update({
+        //     where: { id: referredBy.id },
+        //     data: {
+        //       cashbackBalance: { increment: 100 },
+        //     },
+        //   });
+        // }
 
         const emailToken = uuidv4();
         await prisma.emailVerificationToken.create({
@@ -111,9 +112,8 @@ export class UserService {
           },
         });
 
-        // Send verification email
         this.eventEmitter.emit(
-          'email.verification.requested',
+          'user.created',
           new EmailEvent(user.email!, user.fullName!, {
             verificationToken: emailToken,
           }),

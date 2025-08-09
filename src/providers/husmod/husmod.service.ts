@@ -15,9 +15,9 @@ import { Amount } from 'src/payment-gateway/opay/dto/opay.dto';
 
 import { PrismaService } from 'src/db/prisma.service';
 import { DataDto } from 'src/data-plan/dto/data.dto';
-import { Decimal } from 'generated/prisma/runtime/library';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataPurchaseEvent } from 'src/email/events/mail.event';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class HusmodService {

@@ -10,7 +10,6 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { Decimal } from 'generated/prisma/runtime/library';
 
 export class DataStationDto {
   @IsNotEmpty()

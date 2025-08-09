@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
-import { Decimal } from 'generated/prisma/runtime/library';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class EmailService {
   constructor(private readonly mailerService: MailerService) {}
 
-  async sendWelcomeEmail(to: string, name: string) {
+  async sendWelcomeEmail(to: string, name: string, token?: string) {
     await this.mailerService.sendMail({
       to,
       subject: 'Welcome to Our Platform!',
@@ -14,6 +14,7 @@ export class EmailService {
       context: {
         name,
         email: to,
+        token,
       },
     });
   }

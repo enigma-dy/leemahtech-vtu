@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Telegraf } from 'telegraf';
-import { User, Wallet } from 'generated/prisma';
 import { PrismaService } from 'src/db/prisma.service';
 import { BotContext } from '../interface/bot.interfaces';
+import { Wallet, User } from '@prisma/client';
 
 @Injectable()
 export class UserHandler {
@@ -84,7 +84,7 @@ export class UserHandler {
         await tx.accountLinkToken.delete({ where: { id: linkToken.id } });
       });
 
-      await ctx.reply('✅ Success! Your account has been linked.');
+      await ctx.reply('Success! Your account has been linked.');
     } catch (error) {
       console.error('Error linking account:', error);
       await ctx.reply(

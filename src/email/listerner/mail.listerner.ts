@@ -10,7 +10,11 @@ export class UserCreatedListener {
 
   @OnEvent('user.created')
   async handleUserCreatedEvent(event: EmailEvent) {
-    await this.emailService.sendWelcomeEmail(event.email, event.name);
+    await this.emailService.sendWelcomeEmail(
+      event.email,
+      event.name,
+      event.meta?.token,
+    );
   }
 
   @OnEvent('OpayFunding')

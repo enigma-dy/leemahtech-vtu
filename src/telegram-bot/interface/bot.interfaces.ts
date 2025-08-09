@@ -1,5 +1,5 @@
+import { DataPrice } from '@prisma/client';
 import { Context, Scenes } from 'telegraf';
-import { DataPrice } from 'generated/prisma';
 
 export interface BotWizardSession extends Scenes.WizardSessionData {
   network?: string;

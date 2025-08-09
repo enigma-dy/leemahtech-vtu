@@ -9,9 +9,9 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
 import { HusmodService } from './husmod/husmod.service';
-import { SmeProvider } from 'generated/prisma';
 import { DataStationService } from './datastation/datastation.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { SmeProvider } from '@prisma/client';
 
 @Controller('sme-provider')
 export class SmeProviderController {

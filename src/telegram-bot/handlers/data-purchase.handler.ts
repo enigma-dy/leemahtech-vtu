@@ -4,8 +4,8 @@ import { PrismaService } from 'src/db/prisma.service';
 import { UserHandler } from './user.handler';
 import { WalletHandler } from './wallet.handler';
 import { BotContext, BotWizardSession } from '../interface/bot.interfaces';
-import { DataPrice } from 'generated/prisma';
-import { Decimal } from 'generated/prisma/runtime/library';
+import { Decimal } from '@prisma/client/runtime/library';
+import { DataPrice } from '@prisma/client';
 
 @Injectable()
 export class DataPurchaseHandler {

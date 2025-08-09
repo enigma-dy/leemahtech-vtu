@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   HttpStatus,
   Injectable,
@@ -10,7 +11,6 @@ import { PrismaService } from 'src/db/prisma.service';
 import { LeemahService } from 'src/providers/leemah/leemah.service';
 import { Prisma } from '@prisma/client';
 import { Response, Request } from 'express';
-import { Decimal } from 'generated/prisma/runtime/library';
 import { CreateUnifiedPlanDto, DataDto, UpdataDataDto } from './dto/data.dto';
 import { HusmodService } from 'src/providers/husmod/husmod.service';
 import { DataStationService } from 'src/providers/datastation/datastation.service';
@@ -22,6 +22,7 @@ import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
 import { HusmodDataDto } from 'src/providers/husmod/dto/husmod.dto';
 import { DataPurchaseEvent } from 'src/email/events/mail.event';
 import { NotFoundError } from 'rxjs';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class DataService {
@@ -143,68 +144,275 @@ export class DataService {
   }
 
   async buyData(userId: string, data: DataDto): Promise<any> {
-    const plan = await this.prisma.unifiedPlan.findFirst({
-      where: { id: data.id },
-    });
+    return await this.prisma.$transaction(async (tx) => {
+      const plan = await tx.unifiedPlan.findFirst({
+        where: { id: data.id },
+      });
 
-    const recipient = data.mobileNumber;
-    if (!plan) {
-      return { success: false, message: 'Data plan not found' };
-    }
-
-    let purchaseResult;
-    if (plan.provider === 'husmodata') {
-      purchaseResult = await this.husmodService.buyData(
-        userId,
-        {
-          network: plan.network_id.toString(),
-          mobile_number: recipient,
-          plan: plan.data_plan_id,
-          planSize: plan.plan_size,
-          planVolume: plan.plan_size,
-          planName: plan.plan_type,
-          Ported_number: true,
-        },
-        plan.selling_price,
-      );
-    } else if (plan.provider === 'datastation') {
-      purchaseResult = await this.dataStationService.buyData(
-        userId,
-        {
-          network: plan.network_id.toString(),
-          mobile_number: recipient,
-          plan: plan.data_plan_id,
-          planSize: plan.plan_size,
-          planVolume: plan.plan_size,
-          planName: plan.plan_type,
-          Ported_number: true,
-        },
-        plan.selling_price,
-      );
-    }
-
-    if (purchaseResult?.success) {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-
-      if (!user) {
-        throw new NotFoundException();
+      if (!plan) {
+        return { success: false, message: 'Data plan not found' };
       }
-      this.eventEmitter.emit(
-        'data.purchase',
-        new DataPurchaseEvent(
-          user.email!,
-          user.fullName!,
-          plan.network_name,
-          plan.plan_type,
-          plan.plan_size,
-          recipient,
-          plan.selling_price,
-          purchaseResult.txRef || purchaseResult.transactionId,
-        ),
-      );
-    }
 
-    return purchaseResult;
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { wallet: true },
+      });
+
+      if (!user || !user.wallet) {
+        throw new NotFoundException('User or wallet not found');
+      }
+
+      if (user.wallet.balance.lessThan(plan.selling_price)) {
+        throw new BadRequestException('Insufficient funds');
+      }
+
+      await tx.wallet.update({
+        where: { id: user.wallet.id },
+        data: { balance: { decrement: plan.selling_price } },
+      });
+
+      const userLedger = await tx.ledger.create({
+        data: {
+          description: `Data purchase: ${plan.plan_size} on ${plan.network_name} for ${plan.selling_price}`,
+          createdBy: user.id,
+        },
+      });
+
+      await tx.entry.create({
+        data: {
+          walletId: user.wallet.id,
+          ledgerId: userLedger.id,
+          amount: plan.selling_price,
+          type: 'DEBIT',
+        },
+      });
+
+      const platformLiabilityWallet = await tx.wallet.findFirst({
+        where: { name: 'PLATFORM_LIABILITY_WALLET' },
+      });
+
+      if (!platformLiabilityWallet) {
+        throw new NotFoundException('Platform liability wallet not found');
+      }
+
+      await tx.wallet.update({
+        where: { id: platformLiabilityWallet.id },
+        data: { balance: { decrement: plan.selling_price } },
+      });
+
+      const liabilityLedger = await tx.ledger.create({
+        data: {
+          description: `Liability reduced by ${plan.selling_price} for data purchase`,
+          createdBy: 'SYSTEM',
+        },
+      });
+
+      await tx.entry.create({
+        data: {
+          walletId: platformLiabilityWallet.id,
+          ledgerId: liabilityLedger.id,
+          amount: plan.selling_price,
+          type: 'DEBIT',
+        },
+      });
+
+      const revenueLedger = await tx.ledger.create({
+        data: {
+          description: `Revenue from data purchase: ${plan.selling_price} for plan ${plan.id}`,
+          createdBy: 'SYSTEM',
+        },
+      });
+
+      await tx.entry.create({
+        data: {
+          walletId: 'PLATFORM_REVENUE_WALLET',
+          ledgerId: revenueLedger.id,
+          amount: plan.selling_price,
+          type: 'CREDIT',
+        },
+      });
+
+      const profit = plan.selling_price.sub(plan.plan_amount);
+      const platformProfitWallet = await tx.wallet.findFirst({
+        where: { name: 'PLATFORM_PROFIT_WALLET' },
+      });
+
+      if (!platformProfitWallet) {
+        throw new NotFoundException('Platform profit wallet not found');
+      }
+
+      await tx.wallet.update({
+        where: { id: platformProfitWallet.id },
+        data: { balance: { increment: profit } },
+      });
+
+      const profitLedger = await tx.ledger.create({
+        data: {
+          description: `Profit from data purchase: ${profit} for plan ${plan.id}`,
+          createdBy: 'SYSTEM',
+        },
+      });
+
+      await tx.entry.create({
+        data: {
+          walletId: platformProfitWallet.id,
+          ledgerId: profitLedger.id,
+          amount: profit,
+          type: 'CREDIT',
+        },
+      });
+
+      // Record provider cost
+      await tx.entry.create({
+        data: {
+          walletId: platformProfitWallet.id,
+          ledgerId: profitLedger.id,
+          amount: plan.plan_amount,
+          type: 'DEBIT',
+        },
+      });
+
+      // Call provider API
+      let purchaseResult;
+      if (plan.provider === 'husmodata') {
+        purchaseResult = await this.husmodService.buyData(
+          userId,
+          {
+            network: plan.network_id.toString(),
+            mobile_number: data.mobileNumber,
+            plan: plan.data_plan_id,
+            planSize: plan.plan_size,
+            planVolume: plan.plan_size,
+            planName: plan.plan_type,
+            Ported_number: true,
+          },
+          plan.selling_price,
+        );
+      } else if (plan.provider === 'datastation') {
+        purchaseResult = await this.dataStationService.buyData(
+          userId,
+          {
+            network: plan.network_id.toString(),
+            mobile_number: data.mobileNumber,
+            plan: plan.data_plan_id,
+            planSize: plan.plan_size,
+            planVolume: plan.plan_size,
+            planName: plan.plan_type,
+            Ported_number: true,
+          },
+          plan.selling_price,
+        );
+      }
+
+      // Handle failed purchase
+      if (!purchaseResult?.success) {
+        // Refund user
+        await tx.wallet.update({
+          where: { id: user.wallet.id },
+          data: { balance: { increment: plan.selling_price } },
+        });
+
+        const refundLedger = await tx.ledger.create({
+          data: {
+            description: `Refund for failed data purchase: ${plan.plan_size}`,
+            createdBy: 'SYSTEM',
+          },
+        });
+
+        await tx.entry.create({
+          data: {
+            walletId: user.wallet.id,
+            ledgerId: refundLedger.id,
+            amount: plan.selling_price,
+            type: 'CREDIT',
+          },
+        });
+
+        // Reverse platform revenue
+        await tx.entry.create({
+          data: {
+            walletId: 'PLATFORM_REVENUE_WALLET',
+            ledgerId: refundLedger.id,
+            amount: plan.selling_price,
+            type: 'DEBIT',
+          },
+        });
+
+        // Reverse platform profit
+        await tx.wallet.update({
+          where: { id: platformProfitWallet.id },
+          data: { balance: { decrement: profit } },
+        });
+
+        await tx.entry.create({
+          data: {
+            walletId: platformProfitWallet.id,
+            ledgerId: refundLedger.id,
+            amount: profit,
+            type: 'DEBIT',
+          },
+        });
+
+        // Restore platform liability
+        await tx.wallet.update({
+          where: { id: platformLiabilityWallet.id },
+          data: { balance: { increment: plan.selling_price } },
+        });
+
+        await tx.entry.create({
+          data: {
+            walletId: platformLiabilityWallet.id,
+            ledgerId: refundLedger.id,
+            amount: plan.selling_price,
+            type: 'CREDIT',
+          },
+        });
+
+        return {
+          success: false,
+          message: 'Data purchase failed, amount refunded',
+        };
+      }
+
+      // Record transaction
+      const transaction = await tx.transaction.create({
+        data: {
+          txRef: purchaseResult.txRef || purchaseResult.transactionId,
+          userId,
+          amount: plan.selling_price,
+          currency: 'NGN',
+          status: purchaseResult.success ? 'SUCCESS' : 'FAILED',
+          provider: plan.provider,
+          channel: 'DATA_PURCHASE',
+          walletId: user.wallet.id,
+          completedAt: new Date(),
+        },
+      });
+
+      if (purchaseResult.success) {
+        this.eventEmitter.emit(
+          'data.purchase',
+          new DataPurchaseEvent(
+            user.email!,
+            user.fullName!,
+            plan.network_name,
+            plan.plan_type,
+            plan.plan_size,
+            data.mobileNumber,
+            plan.selling_price,
+            transaction.txRef,
+          ),
+        );
+      }
+
+      return {
+        success: purchaseResult.success,
+        transactionId: transaction.id,
+        message: purchaseResult.success
+          ? 'Data purchase successful'
+          : 'Data purchase failed',
+      };
+    });
   }
 
   async updateDataPlan(data: UpdataDataDto) {

@@ -8,8 +8,8 @@ import {
 } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
+import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
-import { Decimal } from 'generated/prisma/runtime/library';
 import { WalletService } from 'src/wallet/wallet.service';
 
 @Injectable()

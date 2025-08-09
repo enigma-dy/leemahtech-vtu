@@ -11,12 +11,12 @@ import { EmailService } from './mail.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const host = configService.get<string>('SMTP_HOST', 'mailpit');
-        const port = Number(configService.get<number>('SMTP_PORT', 1025));
+        const host = configService.get<string>('SMTP_HOST');
+        const port = Number(configService.get<number>('SMTP_PORT'));
 
         return {
           transport: {
-            host: configService.get<string>('SMTP_HOST', 'mailpit'),
+            host: configService.get<string>('SMTP_HOST'),
             port: port,
             secure: false,
             ignoreTLS: true,

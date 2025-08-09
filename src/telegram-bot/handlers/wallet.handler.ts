@@ -3,8 +3,8 @@ import { Telegraf, Markup } from 'telegraf';
 import { PrismaService } from 'src/db/prisma.service';
 import { UserHandler } from './user.handler';
 import { BotContext } from '../interface/bot.interfaces';
-import { Decimal } from 'generated/prisma/runtime/library';
-import { DataPrice } from 'generated/prisma';
+import { Decimal } from '@prisma/client/runtime/library';
+import { DataPrice } from '@prisma/client';
 
 @Injectable()
 export class WalletHandler {

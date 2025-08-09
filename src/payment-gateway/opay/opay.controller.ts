@@ -7,11 +7,11 @@ import { OpayService } from './opay.service';
 import { Public } from 'src/decorators/auth.decorator';
 import { WalletService } from 'src/wallet/wallet.service';
 import { PrismaService } from 'src/db/prisma.service';
-import { Decimal } from 'generated/prisma/runtime/library';
 import { WalletDto } from 'src/wallet/dto/wallet.dto';
 import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { OpayEvent } from 'src/email/events/mail.event';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Controller('opay')
 export class OpayController {

@@ -10,9 +10,9 @@ import {
   ExamPinPurchaseDto,
 } from './dto/datastation.dto';
 import { PrismaService } from 'src/db/prisma.service';
-import { Decimal } from 'generated/prisma/runtime/library';
 import { DataPurchaseEvent } from 'src/email/events/mail.event';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class DataStationService {
