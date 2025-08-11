@@ -45,7 +45,7 @@ import { join } from 'path';
     DataModule,
     SmeProviderModule,
     OpayModule,
-    VtuTelegramBotModule,
+    // VtuTelegramBotModule,
     EventEmitterModule.forRoot(),
     AdminModule,
     ThrottlerModule.forRoot([

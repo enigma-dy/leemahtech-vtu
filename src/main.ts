@@ -12,8 +12,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  const botService = app.get(VtuTelegramBotService);
-  botService.appRef = app;
+  // const botService = app.get(VtuTelegramBotService);
+  // botService.appRef = app;
 
   app.useGlobalPipes(
     new ValidationPipe({
