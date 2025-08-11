@@ -15,55 +15,36 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     depends_on:
+      leemah-migrate:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
-      mailpit:
+      papercut:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
       interval: 30s
       timeout: 10s
       retries: 3
-    environment:
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=25
-      - DATABASE_URL=postgresql://postgres:admin@db:5432/leemahDb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=leemahDb
-      - SECRET_KEY=your-very-strong-secret-key-here-32-characters-minimum
-      - FLUTTER_AUTH_URL=https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token
-      - FLUTTER_CLIENT_ID=200594117
-      - FLUTTER_PUBLIC_KEY=FLWPUBK_TEST-b5496ba43f8b4da33a334810411b2f0f-X
-      - FLUTTER_SECRET_KEY=FLWSECK_TEST-05d87b94417e2bcba5fc0ad2c5f0f4eb-X
-      - FLUTTER_ENCRYPTION_KEY=FLWSECK_TESTa4ca4100fdd9
-      - OPAY_PAYMENT_URL=https://testapi.opaycheckout.com/api/v1/international/cashier/create
-      - OPAY_STATUS_URL=https://testapi.opaycheckout.com/api/v1/international/cashier/status
-      - OPAY_MERCHANT_ID=256625071511795W
-      - OPAY_PUBLIC_KEY=OPAYPUB17528867238110.6709475837739083
-      - OPAY_PRIVATE_KEY=OPAYPRV17528867238110.18271380172150142
-      - OPAY_CALLBACK_URL=http://nestjs:3000/opay/status
-      - OPAY_RETURN_URL=http://nestjs:3000/payment-complete
-      - OPAY_CANCEL_URL=http://nestjs:3000
-      - OPAY_DISPLAY_NAME=LEEMAH_VTU
-      - LEEMAH_API_KEY=e3fff8ab81088cc7aae27742e0f7eac21ead215c
-      - DataStation_API_KEY=044622753d97825f00042fff5f7ae7ac8a7b1474
-      - HUSMOD_API_KEY=02ebccf680a8e118b117c4742c0e4161cf635304
-      - TG_BOT_TOKEN=7640207645:AAF-_lp-zvA_IJXnmafooHPNz9GNe3LgOGE
-      - TG_WEBHOOK_URL=http://nestjs:3000/webhook
-      - ADMIN_ID=1169433409
-      - PUBLIC_URL=https://carries-drawn-vast-levitra.trycloudflare.com
-      - REDIRECT_URL=https://google.com
-      - PROMETHEUS_ENDPOINT=http://prometheus:9090
-      - LOKI_ENDPOINT=http://loki:3100
+    env_file:
+      - .env.production
+
+  leemah-migrate:
+    build:
+      context: .
+    command: ['npx', 'prisma', 'migrate', 'dev', '--name', 'init']
+    restart: on-failure
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    env_file:
+      - .env.production
 
   db:
     image: postgres:15
     container_name: postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: leemahDb
+    env_file:
+      - .env.production
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
@@ -75,26 +56,18 @@ services:
       retries: 5
       start_period: 30s
 
-  mailpit:
-    image: axllent/mailpit
-    container_name: mailpit
-    hostname: mailpit
+  papercut:
+    image: jijiechen/papercut
+    container_name: papercut
     restart: unless-stopped
-    volumes:
-      - ./data:/data
     ports:
-      - 8025:8025
-      - 1025:25
-    environment:
-      MP_MAX_MESSAGES: 5000
-      MP_DATABASE: /data/mailpit.db
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      - '37408:37408'
+      - '1025:25'
     healthcheck:
-      test: ['CMD', 'nc', '-z', 'localhost', '25']
-      interval: 5s
-      timeout: 2s
-      retries: 5
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:37408']
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   cloudflared:
     image: cloudflare/cloudflared:latest

@@ -87,10 +87,10 @@ export class VtuTelegramBotService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (!this.appRef) {
-      throw new Error(
-        'appRef is not set. Pass Nest app instance from main.ts for webhook mode.',
-      );
+      this.logger.warn('appRef not set — skipping webhook setup');
+      return;
     }
+
     this.appRef.use(this.bot.webhookCallback(webhookPath));
 
     this.logger.log(`🚀 VTU Bot started in WEBHOOK mode at: ${webhookUrl}`);

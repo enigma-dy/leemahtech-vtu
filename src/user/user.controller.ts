@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Put, Param, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Param,
+  Req,
+  NotFoundException,
+  Query,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Public } from 'src/decorators/auth.decorator';
@@ -26,7 +36,7 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user data by email (authenticated user)' })
+  @ApiOperation({ summary: 'Get user data by email ( user)' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Get('email')
@@ -36,17 +46,20 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user data by ID (authenticated user)' })
+  @ApiOperation({ summary: 'Get user data by ID (user)' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @Get('id')
-  async getUserById(@Req() request: Request) {
-    const { sub } = request['user'];
-    return this.userService.getUserById(sub);
+  @Post('getUserById')
+  async getUserById(@Body('id') id: string) {
+    const user = await this.userService.getUserById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update authenticated user data' })
+  @ApiOperation({ summary: 'Update user data' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Put('update')
@@ -77,7 +90,7 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get referral stats for authenticated user' })
+  @ApiOperation({ summary: 'Get referral stats for user' })
   @ApiResponse({
     status: 200,
     description: 'Referral stats retrieved successfully',
@@ -146,7 +159,7 @@ export class UserController {
   })
   @Public()
   @Post('verify-email')
-  async verifyEmail(@Body('token') token: string) {
+  async verifyEmail(@Query('token') token: string) {
     return this.userService.verifyEmail(token);
   }
 }

@@ -17,16 +17,22 @@ import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
+  private readonly baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
   constructor(
     private prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createUser(data: CreateUserDto): Promise<Omit<User, 'password'>> {
-    const { passwordConfirm, password, referralCode, ...userData } = data;
+    console.log(this.baseUrl);
+    const { passwordConfirm, password, referralCode, role, ...userData } = data;
 
     if (password !== passwordConfirm) {
       throw new ConflictException('Password and confirmation do not match');
+    }
+
+    if (!role) {
+      throw new ConflictException('User role cannot be empty');
     }
 
     const existingUser = await this.prisma.user.findFirst({
@@ -47,7 +53,9 @@ export class UserService {
       return await this.prisma.$transaction(async (prisma) => {
         const account = await prisma.wallet.create({
           data: {
-            name: `${userData.fullName.trim()} VTU ${Math.random().toString(36).substring(2, 8)}`,
+            name: `${userData.fullName?.trim() || ''} VTU ${Math.random()
+              .toString(36)
+              .substring(2, 8)}`,
           },
         });
 
@@ -66,17 +74,16 @@ export class UserService {
         const user = await prisma.user.create({
           data: {
             ...userData,
+            userRole: role,
             password: hashedPassword,
             walletId: account.id,
           },
         });
-        const { password: _, ...data } = user;
 
-        //Generate API KEY
-        if (!userData.role) {
-          throw new ConflictException('User role cannot be empty');
-        }
-        if (['reseller', 'affiliate', 'agent'].includes(userData.role)) {
+        const { password: _, ...dataWithoutPassword } = user;
+
+        // Generate API Key for specific roles
+        if (['reseller', 'affiliate', 'agent'].includes(role)) {
           await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -86,42 +93,51 @@ export class UserService {
           });
         }
 
-        //Referral Reward
-        // if (referredBy) {
-        //   await prisma.referralReward.create({
-        //     data: {
-        //       userId: referredBy.id,
-        //       amount: 100,
-        //       description: `Referral bonus for user ${user.email}`,
-        //     },
-        //   });
-        //   await prisma.user.update({
-        //     where: { id: referredBy.id },
-        //     data: {
-        //       cashbackBalance: { increment: 100 },
-        //     },
-        //   });
-        // }
+        // Referral reward code (commented out, uncomment if needed)
+        /*
+      if (referredBy) {
+        await prisma.referralReward.create({
+          data: {
+            userId: referredBy.id,
+            amount: 100,
+            description: `Referral bonus for user ${user.email}`,
+          },
+        });
+        await prisma.user.update({
+          where: { id: referredBy.id },
+          data: {
+            cashbackBalance: { increment: 100 },
+          },
+        });
+      }
+      */
 
         const emailToken = uuidv4();
         await prisma.emailVerificationToken.create({
           data: {
             token: emailToken,
             userId: user.id,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h expiry
           },
         });
+
+        console.log(emailToken);
 
         this.eventEmitter.emit(
           'user.created',
           new EmailEvent(user.email!, user.fullName!, {
-            verificationToken: emailToken,
+            token: emailToken,
+            baseUrl: this.baseUrl,
           }),
         );
-        return data;
+
+        return dataWithoutPassword;
       });
     } catch (error) {
-      throw new InternalServerErrorException('Failed to create user');
+      console.log('Error creating user:', error);
+      throw new InternalServerErrorException(
+        `Failed to create user: Error ${error.message || error}`,
+      );
     }
   }
 

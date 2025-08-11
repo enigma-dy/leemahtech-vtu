@@ -1,18 +1,279 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>Welcome</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Welcome to LeemahVtu</title>
+    <style>
+      body,
+      table,
+      td,
+      a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table,
+      td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        height: auto;
+        line-height: 100%;
+        outline: none;
+        text-decoration: none;
+      }
+      body {
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        background-color: #f2f2f2;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 600px;
+      }
+
+      @media screen and (max-width: 600px) {
+        .container {
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+      }
+    </style>
   </head>
-  <body>
-    <h1>Hello <%= name %>!</h1>
-    <p>Welcome to our platform. We're excited to have you here.</p>
-    <p>Your registered email is: <strong><%= email %></strong></p>
-    <p>Please verify your account using the link below:</p>
-    <p>
-      <a href="https://your-domain.com/verify?token=<%= token %>">
-        Verify My Account
-      </a>
-    </p>
+  <body
+    style="
+      margin: 0 !important;
+      padding: 0 !important;
+      background-color: #f2f2f2;
+    "
+  >
+    <!-- Main Table -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="center" style="background-color: #f2f2f2">
+          <!--[if (gte mso 9)|(IE)]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="600">
+                <tr>
+                <td align="center" valign="top" width="600">
+                <![endif]-->
+          <table border="0" cellpadding="0" cellspacing="0" class="container">
+            <!-- LOGO SECTION -->
+            <tr>
+              <td align="center" style="padding: 40px 0 30px 0">
+                <!-- !! IMPORTANT: Replace 'YOUR_LOGO_URL' with the actual URL to your logo !! -->
+                <img
+                  alt="LeemahVtu Logo"
+                  src="https://YOUR_LOGO_URL/leemahvtu-logo.png"
+                  width="200"
+                  style="
+                    display: block;
+                    width: 200px;
+                    max-width: 200px;
+                    min-width: 200px;
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: #333333;
+                    font-size: 24px;
+                    font-weight: bold;
+                  "
+                  border="0"
+                />
+              </td>
+            </tr>
+            <!-- MAIN CONTENT SECTION -->
+            <tr>
+              <td
+                align="center"
+                style="
+                  padding: 0 15px 40px 15px;
+                  background-color: #ffffff;
+                  border-radius: 8px;
+                "
+              >
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <!-- HEADING -->
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        padding: 40px 20px 20px 20px;
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 28px;
+                        font-weight: 600;
+                        color: #333333;
+                      "
+                    >
+                      Welcome, <%= name %>!
+                    </td>
+                  </tr>
+                  <!-- SUB-HEADING -->
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        padding: 0 20px 20px 20px;
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 16px;
+                        line-height: 24px;
+                        color: #555555;
+                      "
+                    >
+                      We're thrilled to have you join LeemahVtu. Get ready for
+                      seamless and instant virtual top-ups. To get started,
+                      please verify your email address.
+                    </td>
+                  </tr>
+                  <!-- CTA BUTTON -->
+                  <tr>
+                    <td align="center" style="padding: 20px 0">
+                      <table border="0" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td
+                            align="center"
+                            style="border-radius: 5px"
+                            bgcolor="#007bff"
+                          ></td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        padding: 10px 20px 30px 20px;
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 12px;
+                        line-height: 18px;
+                        color: #888888;
+                      "
+                    >
+                      If the button above doesn't work, paste this link into
+                      your browser:
+                      <br />
+                      <%= token %>
+                    </td>
+                  </tr>
+                  <!-- FEATURES LIST -->
+                  <tr>
+                    <td
+                      align="left"
+                      style="
+                        padding: 0 20px 20px 20px;
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 16px;
+                        line-height: 24px;
+                        color: #555555;
+                      "
+                    >
+                      With LeemahVtu, you can:
+                      <ul style="padding-left: 20px; margin-top: 10px">
+                        <li>Purchase Airtime and Data instantly.</li>
+                        <li>Pay your Electricity & TV bills with ease.</li>
+                        <li>Enjoy secure transactions and great prices.</li>
+                      </ul>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <!-- FOOTER SECTION -->
+            <tr>
+              <td align="center" style="padding: 30px 10px 40px 10px">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        padding-bottom: 10px;
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 14px;
+                        line-height: 20px;
+                        color: #888888;
+                      "
+                    >
+                      You received this email because you signed up for an
+                      account at LeemahVtu. If you didn't create this account,
+                      you can safely ignore this email.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      align="center"
+                      style="
+                        font-family:
+                          'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        font-size: 12px;
+                        line-height: 18px;
+                        color: #888888;
+                      "
+                    >
+                      © <%= new Date().getFullYear() %> LeemahVtu. All rights
+                      reserved.<br />
+                      123 VTU Street, Lagos, Nigeria
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td align="center" style="padding-top: 20px">
+                      <a
+                        href="https://twitter.com/leemahvtu"
+                        target="_blank"
+                        style="margin: 0 5px"
+                      >
+                        <img
+                          src="https://img.icons8.com/color/48/000000/twitter--v1.png"
+                          width="30"
+                          alt="Twitter"
+                        />
+                      </a>
+                      <a
+                        href="https://facebook.com/leemahvtu"
+                        target="_blank"
+                        style="margin: 0 5px"
+                      >
+                        <img
+                          src="https://img.icons8.com/color/48/000000/facebook-new.png"
+                          width="30"
+                          alt="Facebook"
+                        />
+                      </a>
+                      <a
+                        href="https://instagram.com/leemahvtu"
+                        target="_blank"
+                        style="margin: 0 5px"
+                      >
+                        <img
+                          src="https://img.icons8.com/color/48/000000/instagram-new--v1.png"
+                          width="30"
+                          alt="Instagram"
+                        />
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <!--[if (gte mso 9)|(IE)]>
+                </td>
+                </tr>
+                </table>
+                <![endif]-->
+        </td>
+      </tr>
+    </table>
   </body>
 </html>
