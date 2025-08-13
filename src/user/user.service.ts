@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -24,7 +25,6 @@ export class UserService {
   ) {}
 
   async createUser(data: CreateUserDto): Promise<Omit<User, 'password'>> {
-    console.log(this.baseUrl);
     const { passwordConfirm, password, referralCode, role, ...userData } = data;
 
     if (password !== passwordConfirm) {
@@ -33,6 +33,10 @@ export class UserService {
 
     if (!role) {
       throw new ConflictException('User role cannot be empty');
+    }
+
+    if (role === 'admin') {
+      throw new ForbiddenException('You cannot register as an admin');
     }
 
     const existingUser = await this.prisma.user.findFirst({
@@ -48,9 +52,9 @@ export class UserService {
     try {
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
-      const uniqueReferralCode = uuidv4().substring(0, 8);
 
       return await this.prisma.$transaction(async (prisma) => {
+        // Create wallet first
         const account = await prisma.wallet.create({
           data: {
             name: `${userData.fullName?.trim() || ''} VTU ${Math.random()
@@ -60,7 +64,6 @@ export class UserService {
         });
 
         let referredBy;
-
         if (referralCode) {
           referredBy = await prisma.user.findFirst({
             where: { referralCode },
@@ -71,27 +74,25 @@ export class UserService {
           }
         }
 
+        // Extra fields for certain roles
+        const extraFields = ['reseller', 'affiliate', 'agent'].includes(role)
+          ? {
+              apiKey: uuidv4(),
+              apiKeyCreatedAt: new Date(),
+              isActiveReseller: role === 'reseller',
+            }
+          : {};
+
+        // Create user with all necessary fields
         const user = await prisma.user.create({
           data: {
             ...userData,
             userRole: role,
             password: hashedPassword,
             walletId: account.id,
+            ...extraFields,
           },
         });
-
-        const { password: _, ...dataWithoutPassword } = user;
-
-        // Generate API Key for specific roles
-        if (['reseller', 'affiliate', 'agent'].includes(role)) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: {
-              apiKey: uuidv4(),
-              apiKeyCreatedAt: new Date(),
-            },
-          });
-        }
 
         // Referral reward code (commented out, uncomment if needed)
         /*
@@ -112,17 +113,17 @@ export class UserService {
       }
       */
 
+        // Create email verification token
         const emailToken = uuidv4();
         await prisma.emailVerificationToken.create({
           data: {
             token: emailToken,
             userId: user.id,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h expiry
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
           },
         });
 
-        console.log(emailToken);
-
+        // Emit event for email verification
         this.eventEmitter.emit(
           'user.created',
           new EmailEvent(user.email!, user.fullName!, {
@@ -131,6 +132,7 @@ export class UserService {
           }),
         );
 
+        const { password: _, ...dataWithoutPassword } = user;
         return dataWithoutPassword;
       });
     } catch (error) {
@@ -186,7 +188,7 @@ export class UserService {
     const user = await this.prisma.user.findFirst({
       where: {
         id: userId,
-        userRole: { in: ['reseller', 'affiliate', 'agent'] },
+        userRole: { in: ['reseller'] },
       },
     });
 
@@ -217,7 +219,7 @@ export class UserService {
     const user = await this.prisma.user.findFirst({
       where: {
         id: userId,
-        userRole: { in: ['reseller', 'affiliate', 'agent'] },
+        userRole: { in: ['reseller'] },
       },
     });
 

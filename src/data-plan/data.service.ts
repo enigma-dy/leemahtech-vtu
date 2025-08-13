@@ -74,7 +74,7 @@ export class DataService {
 
     allHusmodPlans.forEach((plan) => {
       unified.push({
-        provider: SmeProvider.HUSMODATA,
+        provider: SmeProvider.husmodata,
         data_plan_id: plan.dataplan_id,
         network_id: plan.network,
         network_name: plan.plan_network,
@@ -92,7 +92,7 @@ export class DataService {
       const networkName = network.network_info.name;
       network.data_plans.forEach((plan) => {
         unified.push({
-          provider: SmeProvider.DATASTATION,
+          provider: SmeProvider.datastation,
           data_plan_id: plan.id.toString(),
           network_id: networkId,
           network_name: networkName,

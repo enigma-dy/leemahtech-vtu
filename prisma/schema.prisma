@@ -63,8 +63,6 @@ enum Role{
   user
   admin
   reseller
-  affiliate
-  agent
 }
 model Wallet {
   id        String   @id @default(uuid())

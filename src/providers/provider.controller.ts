@@ -11,15 +11,23 @@ import { PrismaService } from 'src/db/prisma.service';
 import { HusmodService } from './husmod/husmod.service';
 import { DataStationService } from './datastation/datastation.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { SmeProvider } from '@prisma/client';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  BillPaymentDto,
+  BuyAirtimeDto,
+  CableSubscriptionDto,
+  ExamPinDto,
+  RechargePinDto,
+  SmeProvider,
+} from './dto/provider.dto';
 
-@Controller('sme-provider')
-export class SmeProviderController {
+@ApiTags('Provider')
+@Controller('provider')
+export class ProviderController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly husmodata: HusmodService,
     private readonly datastation: DataStationService,
-    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private async getActiveProvider(): Promise<SmeProvider> {
@@ -29,138 +37,90 @@ export class SmeProviderController {
 
     if (!setting) throw new NotFoundException('Provider setting not found');
 
-    return setting.activeProvider;
+    return setting.activeProvider as SmeProvider;
+  }
+
+  private getProviderService(provider: SmeProvider) {
+    switch (provider) {
+      case SmeProvider.husmodata:
+        return this.husmodata;
+      case SmeProvider.datastation:
+        return this.datastation;
+      default:
+        throw new NotFoundException('Unknown provider');
+    }
   }
 
   @Get('get')
+  @ApiOperation({ summary: 'Get the current active provider' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active provider returned successfully',
+  })
   async getProvider() {
     return { provider: await this.getActiveProvider() };
   }
 
   @Post('airtime')
-  async sendAirtime(
-    @Body() body: { network_id: number; amount: number; phone: string },
-  ) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.buyAirtime({
-          network: body.network_id,
-          amount: body.amount,
-          mobile_number: body.phone,
-          Ported_number: false,
-          airtime_type: 'VTU',
-        });
-      case SmeProvider.datastation:
-        return this.datastation.buyAirtime({
-          network: body.network_id,
-          amount: body.amount,
-          mobile_number: body.phone,
-          Ported_number: false,
-          airtime_type: 'VTU',
-        });
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+  @ApiOperation({ summary: 'Buy Airtime' })
+  @ApiResponse({ status: 201, description: 'Airtime purchase successful' })
+  async sendAirtime(@Body() body: BuyAirtimeDto) {
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.buyAirtime({
+      network: body.network_id,
+      amount: body.amount,
+      mobile_number: body.phone,
+      Ported_number: false,
+      airtime_type: 'VTU',
+    });
   }
 
   @Post('bill')
-  async sendBillPayment(
-    @Body()
-    body: {
-      disco_name: string;
-      amount: number;
-      meter_number: string;
-      MeterType: number;
-    },
-  ) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.electricityBillPayment(body);
-      case SmeProvider.datastation:
-        return this.datastation.electricityBillPayment(body);
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+  @ApiOperation({ summary: 'Pay electricity bill' })
+  @ApiResponse({ status: 201, description: 'Bill payment successful' })
+  async sendBillPayment(@Body() body: BillPaymentDto) {
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.electricityBillPayment(body);
   }
 
   @Post('cable')
-  async subscribeCable(
-    @Body()
-    body: {
-      cablename: number;
-      cableplan: number;
-      smart_card_number: string;
-    },
-  ) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.queryCableSub(body.cablename.toString());
-      case SmeProvider.datastation:
-        return this.datastation.queryCableSub(body.cablename.toString());
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+  @ApiOperation({ summary: 'Query cable subscription' })
+  @ApiResponse({
+    status: 201,
+    description: 'Cable subscription query successful',
+  })
+  async subscribeCable(@Body() body: CableSubscriptionDto) {
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.queryCableSub(body.cablename.toString());
   }
 
   @Post('recharge-pin')
-  async getRechargePin(
-    @Body()
-    body: {
-      network: number;
-      network_amount: number;
-      quantity: number;
-      name_on_card: string;
-    },
-  ) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.generateRechargePin(body);
-      case SmeProvider.datastation:
-        return this.datastation.generateRechargePin(body);
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+  @ApiOperation({ summary: 'Generate recharge pin' })
+  @ApiResponse({
+    status: 201,
+    description: 'Recharge pin generated successfully',
+  })
+  async getRechargePin(@Body() body: RechargePinDto) {
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.generateRechargePin(body);
   }
 
   @Post('exam-pin')
-  async getExamPin(
-    @Body()
-    body: {
-      exam_name: string;
-      quantity: number;
-    },
-  ) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.buyResultCheckerPin(body);
-      case SmeProvider.datastation:
-        return this.datastation.buyResultCheckerPin(body);
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+  @ApiOperation({ summary: 'Buy exam result checker pin' })
+  @ApiResponse({ status: 201, description: 'Exam pin purchase successful' })
+  async getExamPin(@Body() body: ExamPinDto) {
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.buyResultCheckerPin(body);
   }
 
   @Get('data/:id')
+  @ApiOperation({ summary: 'Query data plan transaction' })
+  @ApiResponse({
+    status: 200,
+    description: 'Data plan transaction details returned',
+  })
   async queryDataPlan(@Param('id', ParseIntPipe) id: number) {
-    const provider = await this.getActiveProvider();
-
-    switch (provider) {
-      case SmeProvider.husmodata:
-        return this.husmodata.queryDataTransaction(id.toString());
-      case SmeProvider.datastation:
-        return this.datastation.queryDataTransaction(id.toString());
-      default:
-        throw new NotFoundException('Unknown provider');
-    }
+    const service = this.getProviderService(await this.getActiveProvider());
+    return service.queryDataTransaction(id.toString());
   }
 }

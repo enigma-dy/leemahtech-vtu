@@ -21,7 +21,7 @@ export class ApiKeyGuard implements CanActivate {
     const user = await this.prisma.user.findFirst({
       where: {
         apiKey,
-        userRole: { in: ['reseller', 'affiliate', 'agent'] },
+        userRole: { in: ['reseller'] },
         isActiveReseller: true,
       },
     });

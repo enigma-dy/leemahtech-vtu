@@ -1,7 +1,12 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+
+export enum Role {
+  user = 'user',
+  admin = 'admin',
+  reseller = 'reseller',
+}
 
 export class CreateUserDto {
   @ApiProperty({
@@ -47,6 +52,7 @@ export class CreateUserDto {
     example: '123 Main St, New York, NY',
     description: 'Residential address',
   })
+  @IsOptional()
   @IsString()
   address: string;
 

@@ -1,33 +1,41 @@
 import {
-  Body,
   Controller,
   Get,
-  HttpStatus,
   Post,
+  Body,
   Req,
   Res,
+  HttpStatus,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { Request, Response } from 'express';
+import { DataDto, UpdataDataDto } from './dto/data.dto';
 import { DataService } from './data.service';
 
-import { Response, Request } from 'express';
-import { DataDto, UpdataDataDto } from './dto/data.dto';
-
+@ApiTags('Data Plans')
 @Controller('data')
 export class DataController {
   constructor(private readonly dataService: DataService) {}
 
   @Get('sync')
+  @ApiOperation({ summary: 'Sync data plans from provider' })
+  @ApiResponse({ status: 200, description: 'Data plans synced successfully' })
   async syncDataPrice() {
     return this.dataService.fetchAndStoreAllPlans();
   }
 
   @Get('all')
+  @ApiOperation({ summary: 'Get all data plans' })
+  @ApiResponse({ status: 200, description: 'List of all data plans' })
   async getAllDataPlans() {
     return this.dataService.getAllDataPlans();
   }
 
   @Post('update')
-  async updateDataPrice(data: UpdataDataDto) {
+  @ApiOperation({ summary: 'Update selling price of a data plan' })
+  @ApiBody({ type: UpdataDataDto })
+  @ApiResponse({ status: 200, description: 'Plan updated successfully' })
+  async updateDataPrice(@Body() data: UpdataDataDto) {
     const result = await this.dataService.updateDataPlan(data);
     return {
       message: 'Plan saved successfully',
@@ -36,6 +44,13 @@ export class DataController {
   }
 
   @Post('buy')
+  @ApiOperation({ summary: 'Purchase a data plan' })
+  @ApiBody({ type: DataDto })
+  @ApiResponse({ status: 200, description: 'Data plan purchased successfully' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request or failed transaction',
+  })
   async buyDataPlan(
     @Body() data: DataDto,
     @Req() request: Request,
