@@ -40,4 +40,13 @@ export class UserCreatedListener {
       event.txRef,
     );
   }
+
+  @OnEvent('password.reset.requested')
+  async handlePasswordResetRequested(event: EmailEvent) {
+    await this.emailService.sendPasswordResetEmail(
+      event.email,
+      event.name,
+      event.meta?.resetToken,
+    );
+  }
 }

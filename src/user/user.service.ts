@@ -269,8 +269,9 @@ export class UserService {
     }
 
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour expiry
+    const expiresAt = new Date(Date.now() + 3600 * 1000);
 
+    console.log(token);
     await this.prisma.passwordResetToken.create({
       data: {
         token,

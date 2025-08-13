@@ -6,6 +6,9 @@ import { Decimal } from '@prisma/client/runtime/library';
 export class EmailService {
   constructor(private readonly mailerService: MailerService) {}
 
+  private readonly baseUrl =
+    process.env.FRONTEND_URL || 'http://localhost:3000';
+
   async sendWelcomeEmail(to: string, name: string, token?: string) {
     await this.mailerService.sendMail({
       to,
@@ -131,6 +134,18 @@ export class EmailService {
       subject: 'Data Purchase Receipt',
       template: 'data-purchase',
       context: { name, network, planName, planSize, phone, amount, txRef },
+    });
+  }
+
+  async sendPasswordResetEmail(to: string, name: string, resetToken: string) {
+    await this.mailerService.sendMail({
+      to,
+      subject: 'Password Reset Request',
+      template: 'password-reset', // create this template
+      context: {
+        name,
+        resetLink: `${this.baseUrl}/reset-password?token=${resetToken}`,
+      },
     });
   }
 }

@@ -18,8 +18,11 @@ import {
   CableSubscriptionDto,
   ExamPinDto,
   RechargePinDto,
+  SetSmeProviderDto,
   SmeProvider,
 } from './dto/provider.dto';
+import { ProviderService } from './provider.service';
+import { Admin } from 'src/decorators/roles.decorator';
 
 @ApiTags('Provider')
 @Controller('provider')
@@ -28,6 +31,7 @@ export class ProviderController {
     private readonly prisma: PrismaService,
     private readonly husmodata: HusmodService,
     private readonly datastation: DataStationService,
+    private readonly providerService: ProviderService,
   ) {}
 
   private async getActiveProvider(): Promise<SmeProvider> {
@@ -52,6 +56,7 @@ export class ProviderController {
   }
 
   @Get('get')
+  @Admin()
   @ApiOperation({ summary: 'Get the current active provider' })
   @ApiResponse({
     status: 200,
@@ -59,6 +64,21 @@ export class ProviderController {
   })
   async getProvider() {
     return { provider: await this.getActiveProvider() };
+  }
+
+  @Post('set')
+  @Admin()
+  @ApiOperation({ summary: 'Set the current active provider' })
+  @ApiResponse({
+    status: 200,
+    description: 'Active provider updated successfully',
+  })
+  async setProvider(@Body() dto: SetSmeProviderDto) {
+    await this.providerService.setActiveProvider(dto);
+    return {
+      message: 'Active provider updated successfully',
+      provider: dto.provider,
+    };
   }
 
   @Post('airtime')

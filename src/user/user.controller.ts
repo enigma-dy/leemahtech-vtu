@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Query,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
@@ -53,6 +54,9 @@ export class UserController {
   @ApiResponse({ status: 404, description: 'User not found' })
   @Post('getUserById')
   async getUserById(@Body('id') id: string) {
+    if (!id) {
+      throw new BadRequestException('User ID is required');
+    }
     const user = await this.userService.getUserById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -118,6 +122,7 @@ export class UserController {
   @Public()
   @Post('password-reset-request')
   async requestPasswordReset(@Body('email') email: string) {
+    console.log(email);
     return this.userService.requestPasswordReset(email);
   }
 
@@ -150,8 +155,6 @@ export class UserController {
     status: 404,
     description: 'Invalid or expired verification token',
   })
-  @Public()
-  @Get('verify-email')
   @Public()
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string, @Res() res: Response) {
