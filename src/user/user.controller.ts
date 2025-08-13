@@ -8,6 +8,7 @@ import {
   Req,
   NotFoundException,
   Query,
+  Res,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
@@ -20,6 +21,7 @@ import {
   ApiParam,
   ApiBody,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 
 @ApiTags('User')
 @Controller('user')
@@ -143,23 +145,21 @@ export class UserController {
     return this.userService.resetPassword(token, newPassword, passwordConfirm);
   }
 
-  @ApiOperation({ summary: 'Verify email using token' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        token: { type: 'string', example: 'abc123' },
-      },
-    },
-  })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({
     status: 404,
     description: 'Invalid or expired verification token',
   })
   @Public()
-  @Post('verify-email')
-  async verifyEmail(@Query('token') token: string) {
-    return this.userService.verifyEmail(token);
+  @Get('verify-email')
+  @Public()
+  @Get('verify-email')
+  async verifyEmail(@Query('token') token: string, @Res() res: Response) {
+    try {
+      await this.userService.verifyEmail(token);
+      return res.redirect(`${process.env.FRONTEND_URL}/`);
+    } catch (error) {
+      return res.redirect(`${process.env.FRONTEND_URL}/verificaion-failed`);
+    }
   }
 }

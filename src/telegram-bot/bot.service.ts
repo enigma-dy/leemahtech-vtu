@@ -31,7 +31,7 @@ export class VtuTelegramBotService implements OnModuleInit, OnModuleDestroy {
     if (!token) throw new Error('TG_BOT_TOKEN not set');
 
     const mode = process.env.BOT_MODE || 'webhook';
-    const publicUrl = process.env.PUBLIC_URL;
+    const publicUrl = process.env.FRONTEND_URL;
     const agent = new https.Agent({ keepAlive: true });
     this.bot = new Telegraf<BotContext>(token, { telegram: { agent } });
 

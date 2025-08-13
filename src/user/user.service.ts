@@ -18,7 +18,8 @@ import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
-  private readonly baseUrl = process.env.PUBLIC_URL || 'http://localhost:3000';
+  private readonly baseUrl =
+    process.env.FRONTEND_URL || 'http://localhost:3000';
   constructor(
     private prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
@@ -73,8 +74,8 @@ export class UserService {
             throw new NotFoundException('Invalid referral code');
           }
         }
+        //filter role and generate API KEY
 
-        // Extra fields for certain roles
         const extraFields = ['reseller', 'affiliate', 'agent'].includes(role)
           ? {
               apiKey: uuidv4(),
@@ -94,25 +95,6 @@ export class UserService {
           },
         });
 
-        // Referral reward code (commented out, uncomment if needed)
-        /*
-      if (referredBy) {
-        await prisma.referralReward.create({
-          data: {
-            userId: referredBy.id,
-            amount: 100,
-            description: `Referral bonus for user ${user.email}`,
-          },
-        });
-        await prisma.user.update({
-          where: { id: referredBy.id },
-          data: {
-            cashbackBalance: { increment: 100 },
-          },
-        });
-      }
-      */
-
         // Create email verification token
         const emailToken = uuidv4();
         await prisma.emailVerificationToken.create({
@@ -127,8 +109,7 @@ export class UserService {
         this.eventEmitter.emit(
           'user.created',
           new EmailEvent(user.email!, user.fullName!, {
-            token: emailToken,
-            baseUrl: this.baseUrl,
+            token: `${this.baseUrl}/user/verify-email?token=${emailToken}`,
           }),
         );
 

@@ -42,7 +42,7 @@ async function bootstrap() {
   app.enableCors();
 
   const config = new DocumentBuilder()
-    .setTitle('CampuxMart')
+    .setTitle('LeemahTech')
     .setDescription('API for managing users, vtu, notifications, and templates')
     .setVersion('1.0.0')
     .addBearerAuth(
