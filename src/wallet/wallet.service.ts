@@ -313,27 +313,45 @@ export class WalletService implements OnModuleInit {
   }
 
   private async initializePlatformWallets() {
-    const wallets = [
-      { id: 'platform-liability-wallet-id', name: 'PLATFORM_LIABILITY_WALLET' },
-      { id: 'platform-revenue-wallet-id', name: 'PLATFORM_REVENUE_WALLET' },
-      { id: 'platform-profit-wallet-id', name: 'PLATFORM_PROFIT_WALLET' },
+    const walletNames = [
+      'PLATFORM_LIABILITY_WALLET',
+      'PLATFORM_REVENUE_WALLET',
+      'PLATFORM_PROFIT_WALLET',
     ];
 
+    const existingWallets = await this.prisma.wallet.findMany({
+      where: {
+        name: { in: walletNames },
+      },
+      select: { name: true },
+    });
+
+    if (existingWallets.length === walletNames.length) {
+      console.log(
+        '✅ Platform wallets already exist. Skipping initialization.',
+      );
+      return;
+    }
+
+    const missingWallets = walletNames.filter(
+      (name) => !existingWallets.some((w) => w.name === name),
+    );
+
     await Promise.all(
-      wallets.map((wallet) =>
-        this.prisma.wallet.upsert({
-          where: { name: wallet.name },
-          update: {},
-          create: {
-            id: wallet.id,
-            name: wallet.name,
+      missingWallets.map((name) =>
+        this.prisma.wallet.create({
+          data: {
+            id: `${name.toLowerCase().replace(/_/g, '-')}-id`,
+            name,
             balance: new Decimal(0),
           },
         }),
       ),
     );
 
-    console.log('✅ Platform wallets initialized');
+    console.log(
+      `✅ Created missing platform wallets: ${missingWallets.join(', ')}`,
+    );
   }
 
   async getInflowOutflow(
