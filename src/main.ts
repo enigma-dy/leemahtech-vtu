@@ -8,6 +8,7 @@ import { VtuTelegramBotService } from './telegram-bot/bot.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
+  
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalFilters(new AllExceptionsFilter());
