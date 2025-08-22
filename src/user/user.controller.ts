@@ -24,6 +24,11 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 
+enum UserRole {
+  ADMIN = 'admin',
+  USER = 'user',
+  RESELLER = 'reseller',
+}
 @ApiTags('User')
 @Controller('user')
 export class UserController {
@@ -50,9 +55,17 @@ export class UserController {
 
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get user data by ID (user)' })
+  @ApiBody({
+    description: 'User ID payload',
+    schema: {
+      example: {
+        id: '12345',
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @Post('getUserById')
+  @Post('id')
   async getUserById(@Body('id') id: string) {
     if (!id) {
       throw new BadRequestException('User ID is required');
@@ -164,5 +177,13 @@ export class UserController {
     } catch (error) {
       return res.redirect(`${process.env.FRONTEND_URL}/verificaion-failed`);
     }
+  }
+
+  @Public()
+  @ApiOperation({ summary: 'Get all user roles' })
+  @ApiResponse({ status: 200, description: 'Roles retrieved successfully' })
+  @Get('roles')
+  getAllRoles(): string[] {
+    return Object.values(UserRole);
   }
 }

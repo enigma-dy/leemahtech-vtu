@@ -120,6 +120,7 @@ export class DataService {
           network_name: plan.network_name,
           plan_amount: plan.plan_amount,
           selling_price: plan.plan_amount,
+          reseller_price: plan.plan_amount,
           plan_size: plan.plan_size,
           plan_type: plan.plan_type || '',
           validity: plan.validity || '',

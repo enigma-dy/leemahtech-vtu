@@ -57,6 +57,8 @@ model User {
   EmailVerificationToken EmailVerificationToken[]
 
   DataPurchase DataPurchase[]
+
+  ApiKeyUsage ApiKeyUsage[]
 }
 
 enum Role{
@@ -197,6 +199,7 @@ model UnifiedPlan {
   network_name  String
   plan_amount   Decimal
   selling_price Decimal
+  reseller_price Decimal
   plan_size     String
   plan_type     String
   validity      String
@@ -235,4 +238,13 @@ model EmailVerificationToken {
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model ApiKeyUsage {
+  id        String   @id @default(ulid())
+  userId    String
+  apiKey    String
+  endpoint  String
+  accessedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
 }

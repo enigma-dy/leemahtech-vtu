@@ -76,7 +76,7 @@ export class UserService {
         }
         //filter role and generate API KEY
 
-        const extraFields = ['reseller', 'affiliate', 'agent'].includes(role)
+        const extraFields = ['reseller'].includes(role)
           ? {
               apiKey: uuidv4(),
               apiKeyCreatedAt: new Date(),
