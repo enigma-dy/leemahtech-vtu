@@ -10,18 +10,21 @@ export enum Role {
 
 export class CreateUserDto {
   @ApiProperty({
-    example: 'John Doe',
+    example: 'leemah tech',
     description: 'Full legal name of the user',
   })
   @IsString()
   fullName: string;
 
-  @ApiProperty({ example: 'johndoe', description: 'Unique username for login' })
+  @ApiProperty({
+    example: 'user1234',
+    description: 'Unique username for login',
+  })
   @IsString()
   username: string;
 
   @ApiProperty({
-    example: 'john@example.com',
+    example: 'user@example.com',
     description: 'User email address',
   })
   @IsString()

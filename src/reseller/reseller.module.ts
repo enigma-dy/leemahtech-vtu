@@ -12,4 +12,4 @@ import { ResellerDataService } from './reseller.service';
   providers: [ResellerDataService],
   exports: [ResellerDataService],
 })
-export class DataModule {}
+export class ResellerModule {}

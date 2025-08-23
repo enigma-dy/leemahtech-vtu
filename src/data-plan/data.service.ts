@@ -51,99 +51,6 @@ export class DataService {
       },
     });
   }
-
-  async fetchAndStoreAllPlans(): Promise<{
-    message: string;
-    count: number;
-    data: CreateUnifiedPlanDto[];
-  }> {
-    const husmodResponse = await this.husmodService.getDataPricing();
-    const datastationResponse = await this.dataStationService.getDataPricing();
-
-    const unified: CreateUnifiedPlanDto[] = [];
-
-    const husmodData = husmodResponse;
-    const datastationData = datastationResponse;
-
-    const allHusmodPlans = [
-      ...(husmodData?.MTN_PLAN || []),
-      ...(husmodData?.GLO_PLAN || []),
-      ...(husmodData?.AIRTEL_PLAN || []),
-      ...(husmodData?.['9MOBILE_PLAN'] || []),
-    ];
-
-    allHusmodPlans.forEach((plan) => {
-      unified.push({
-        provider: SmeProvider.husmodata,
-        data_plan_id: plan.dataplan_id,
-        network_id: plan.network,
-        network_name: plan.plan_network,
-        plan_amount: parseFloat(plan.plan_amount),
-        selling_price: parseFloat(plan.plan_amount),
-        plan_size: plan.plan,
-        plan_type: plan.plan_type || '',
-        validity: plan.month_validate?.replace(/---/g, '').trim() || '',
-      });
-    });
-
-    Object.values(datastationData || {}).forEach((network: any) => {
-      if (!network.network_info || !network.data_plans) return;
-      const networkId = network.network_info.id;
-      const networkName = network.network_info.name;
-      network.data_plans.forEach((plan) => {
-        unified.push({
-          provider: SmeProvider.datastation,
-          data_plan_id: plan.id.toString(),
-          network_id: networkId,
-          network_name: networkName,
-          plan_amount: plan.plan_amount,
-          selling_price: plan.selling_price,
-          plan_size: `${plan.plan_size}${plan.plan_Volume}`,
-          plan_type: plan.plan_type || '',
-          validity: plan.month_validate?.trim() || '',
-        });
-      });
-    });
-
-    for (const plan of unified) {
-      await this.prisma.unifiedPlan.upsert({
-        where: {
-          provider_data_plan_id: {
-            provider: plan.provider,
-            data_plan_id: plan.data_plan_id,
-          },
-        },
-        create: {
-          provider: plan.provider,
-          data_plan_id: plan.data_plan_id,
-          network_id: plan.network_id,
-          network_name: plan.network_name,
-          plan_amount: plan.plan_amount,
-          selling_price: plan.plan_amount,
-          reseller_price: plan.plan_amount,
-          plan_size: plan.plan_size,
-          plan_type: plan.plan_type || '',
-          validity: plan.validity || '',
-        },
-        update: {
-          network_id: plan.network_id,
-          network_name: plan.network_name,
-          plan_amount: plan.plan_amount,
-          plan_size: plan.plan_size,
-          plan_type: plan.plan_type,
-          validity: plan.validity,
-        },
-      });
-    }
-
-    return {
-      message:
-        'Plans from all providers have been successfully fetched and stored.',
-      count: unified.length,
-      data: unified,
-    };
-  }
-
   async buyData(userId: string, data: DataDto): Promise<any> {
     return await this.prisma.$transaction(async (tx) => {
       const plan = await tx.unifiedPlan.findFirst({
@@ -414,6 +321,97 @@ export class DataService {
           : 'Data purchase failed',
       };
     });
+  }
+  async fetchAndStoreAllPlans(): Promise<{
+    message: string;
+    count: number;
+    data: CreateUnifiedPlanDto[];
+  }> {
+    const husmodResponse = await this.husmodService.getDataPricing();
+    const datastationResponse = await this.dataStationService.getDataPricing();
+
+    const unified: CreateUnifiedPlanDto[] = [];
+
+    const husmodData = husmodResponse;
+    const datastationData = datastationResponse;
+
+    const allHusmodPlans = [
+      ...(husmodData?.MTN_PLAN || []),
+      ...(husmodData?.GLO_PLAN || []),
+      ...(husmodData?.AIRTEL_PLAN || []),
+      ...(husmodData?.['9MOBILE_PLAN'] || []),
+    ];
+
+    allHusmodPlans.forEach((plan) => {
+      unified.push({
+        provider: SmeProvider.husmodata,
+        data_plan_id: plan.dataplan_id,
+        network_id: plan.network,
+        network_name: plan.plan_network,
+        plan_amount: parseFloat(plan.plan_amount),
+        selling_price: parseFloat(plan.plan_amount),
+        plan_size: plan.plan,
+        plan_type: plan.plan_type || '',
+        validity: plan.month_validate?.replace(/---/g, '').trim() || '',
+      });
+    });
+
+    Object.values(datastationData || {}).forEach((network: any) => {
+      if (!network.network_info || !network.data_plans) return;
+      const networkId = network.network_info.id;
+      const networkName = network.network_info.name;
+      network.data_plans.forEach((plan) => {
+        unified.push({
+          provider: SmeProvider.datastation,
+          data_plan_id: plan.id.toString(),
+          network_id: networkId,
+          network_name: networkName,
+          plan_amount: plan.plan_amount,
+          selling_price: plan.selling_price,
+          plan_size: `${plan.plan_size}${plan.plan_Volume}`,
+          plan_type: plan.plan_type || '',
+          validity: plan.month_validate?.trim() || '',
+        });
+      });
+    });
+
+    for (const plan of unified) {
+      await this.prisma.unifiedPlan.upsert({
+        where: {
+          provider_data_plan_id: {
+            provider: plan.provider,
+            data_plan_id: plan.data_plan_id,
+          },
+        },
+        create: {
+          provider: plan.provider,
+          data_plan_id: plan.data_plan_id,
+          network_id: plan.network_id,
+          network_name: plan.network_name,
+          plan_amount: plan.plan_amount,
+          selling_price: plan.plan_amount,
+          reseller_price: plan.plan_amount,
+          plan_size: plan.plan_size,
+          plan_type: plan.plan_type || '',
+          validity: plan.validity || '',
+        },
+        update: {
+          network_id: plan.network_id,
+          network_name: plan.network_name,
+          plan_amount: plan.plan_amount,
+          plan_size: plan.plan_size,
+          plan_type: plan.plan_type,
+          validity: plan.validity,
+        },
+      });
+    }
+
+    return {
+      message:
+        'Plans from all providers have been successfully fetched and stored.',
+      count: unified.length,
+      data: unified,
+    };
   }
 
   async updateDataPlan(data: UpdataDataDto) {

@@ -6,6 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
+import { verifyApiKey } from 'src/misc/api-key.util';
 
 @Injectable()
 export class ResellerGuard implements CanActivate {
@@ -13,14 +14,22 @@ export class ResellerGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const apiKey = request.headers['x-api-key'] || request.headers['X-API-KEY'];
+    const apiKey = request.headers['x-api-key'] as string;
 
     if (!apiKey) {
       throw new UnauthorizedException('API key is missing');
     }
 
+    console.log(apiKey);
+
+    const { valid, expired, resellerEmail } = verifyApiKey(apiKey);
+    if (!valid)
+      throw new UnauthorizedException(
+        expired ? 'API key expired' : 'Invalid API key',
+      );
+
     const user = await this.prisma.user.findUnique({
-      where: { apiKey },
+      where: { email: resellerEmail },
       select: {
         id: true,
         email: true,
@@ -31,19 +40,12 @@ export class ResellerGuard implements CanActivate {
       },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid API key');
-    }
-
-    if (!user.isActiveReseller) {
+    if (!user) throw new UnauthorizedException('User not found');
+    if (!user.isActiveReseller)
       throw new ForbiddenException('User is not an active reseller');
-    }
-
-    if (!user.isEmailVerified) {
+    if (!user.isEmailVerified)
       throw new ForbiddenException('Reseller email is not verified');
-    }
 
-    // attach user to request
     request.user = {
       sub: user.id,
       email: user.email,

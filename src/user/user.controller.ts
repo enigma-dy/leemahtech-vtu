@@ -44,13 +44,13 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get user data by email ( user)' })
+  @ApiOperation({ summary: 'Get current user details' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  @Get('email')
+  @Get('me')
   async getUserEmail(@Req() request: Request) {
     const { email } = request['user'];
-    return this.userService.getUserByEmail(email);
+    return this.userService.getUser(email);
   }
 
   @ApiBearerAuth()
@@ -78,6 +78,30 @@ export class UserController {
   }
 
   @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user data by Email (user)' })
+  @ApiBody({
+    description: 'User ID payload',
+    schema: {
+      example: {
+        email: 'user@email.com',
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Post('email')
+  async getUserByEmail(@Body('email') email: string) {
+    if (!email) {
+      throw new BadRequestException('User ID is required');
+    }
+    const user = await this.userService.getUserByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update user data' })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
@@ -88,7 +112,7 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Activate reseller/affiliate/agent account' })
+  @ApiOperation({ summary: 'Activate reseller' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Account activated successfully' })
   @ApiResponse({ status: 404, description: 'User not found or not eligible' })

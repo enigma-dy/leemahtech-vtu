@@ -15,6 +15,7 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { EmailEvent } from 'src/email/events/mail.event';
 import { User } from '@prisma/client';
+import { generateApiKey } from 'src/misc/api-key.util';
 
 @Injectable()
 export class UserService {
@@ -25,7 +26,9 @@ export class UserService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async createUser(data: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async createUser(
+    data: CreateUserDto,
+  ): Promise<{ user: Omit<User, 'password'>; token: string }> {
     const { passwordConfirm, password, referralCode, role, ...userData } = data;
 
     if (password !== passwordConfirm) {
@@ -53,15 +56,11 @@ export class UserService {
     try {
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
+      const shortId = uuidv4().split('-')[0];
 
       return await this.prisma.$transaction(async (prisma) => {
-        // Create wallet first
         const account = await prisma.wallet.create({
-          data: {
-            name: `${userData.fullName?.trim() || ''} VTU ${Math.random()
-              .toString(36)
-              .substring(2, 8)}`,
-          },
+          data: { name: `${userData.fullName}-${shortId}` },
         });
 
         let referredBy;
@@ -74,17 +73,17 @@ export class UserService {
             throw new NotFoundException('Invalid referral code');
           }
         }
-        //filter role and generate API KEY
+
+        const apiKey = generateApiKey(userData.email, 60 * 60 * 24 * 30);
 
         const extraFields = ['reseller'].includes(role)
           ? {
-              apiKey: uuidv4(),
+              apiKey,
               apiKeyCreatedAt: new Date(),
               isActiveReseller: role === 'reseller',
             }
           : {};
 
-        // Create user with all necessary fields
         const user = await prisma.user.create({
           data: {
             ...userData,
@@ -95,7 +94,6 @@ export class UserService {
           },
         });
 
-        // Create email verification token
         const emailToken = uuidv4();
         await prisma.emailVerificationToken.create({
           data: {
@@ -105,7 +103,6 @@ export class UserService {
           },
         });
 
-        // Emit event for email verification
         this.eventEmitter.emit(
           'user.created',
           new EmailEvent(user.email!, user.fullName!, {
@@ -113,8 +110,10 @@ export class UserService {
           }),
         );
 
-        const { password: _, ...dataWithoutPassword } = user;
-        return dataWithoutPassword;
+        const { password: _, ...userWithoutPassword } = user;
+
+        const tokenUrl = `${this.baseUrl}/user/verify-email?token=${emailToken}`;
+        return { user: userWithoutPassword, token: tokenUrl };
       });
     } catch (error) {
       console.log('Error creating user:', error);
@@ -124,7 +123,7 @@ export class UserService {
     }
   }
 
-  async getUserByEmail(email: string) {
+  async getUser(email: string) {
     const user = await this.prisma.user.findFirst({
       where: { email: email },
       include: { wallet: true },
@@ -139,6 +138,18 @@ export class UserService {
   async getUserById(id: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: id },
+      include: { wallet: true },
+    });
+    if (!user) {
+      throw new NotFoundException();
+    }
+    const { password, ...userData } = user;
+    return userData;
+  }
+
+  async getUserByEmail(email: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { email: email },
       include: { wallet: true },
     });
     if (!user) {
@@ -174,9 +185,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found or not a reseller/affiliate/agent',
-      );
+      throw new NotFoundException('User not found or not a reseller');
     }
 
     if (user.isActiveReseller) {
@@ -204,13 +213,13 @@ export class UserService {
       },
     });
 
-    if (!user) {
+    if (!user || !user.email) {
       throw new NotFoundException(
         'User not found or not a reseller/affiliate/agent',
       );
     }
 
-    const newApiKey = uuidv4();
+    const newApiKey = generateApiKey(user.email, 60 * 60 * 24 * 30);
     await this.prisma.user.update({
       where: { id: userId },
       data: {

@@ -4,25 +4,32 @@ import {
   Post,
   Put,
   Body,
-  UseGuards,
   Param,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiSecurity,
+} from '@nestjs/swagger';
 
 import { ResellerDataService } from './reseller.service';
-import { ResellerGuard } from './reseller.guard';
 import { DataDto, UpdataResellerDataDto } from './dto/reseller.dto';
-import { CurrentUser } from 'src/decorators/reseller.decorator';
+
+import { ResellerRoute } from 'src/decorators/reseller.decorator';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @ApiTags('Reseller Data Plans')
+@ApiSecurity('x-api-key')
 @Controller('reseller/data')
+@ResellerRoute()
 export class ResellerDataController {
   constructor(private readonly resellerDataService: ResellerDataService) {}
 
   @Get('all')
-  @UseGuards(ResellerGuard)
   @ApiOperation({ summary: 'Get all data plans for resellers' })
   @ApiResponse({
     status: 200,
@@ -50,7 +57,6 @@ export class ResellerDataController {
   }
 
   @Post('buy')
-  @UseGuards(ResellerGuard)
   @ApiOperation({ summary: 'Purchase a data plan for resellers' })
   @ApiBody({ type: DataDto })
   @ApiResponse({ status: 200, description: 'Data plan purchased successfully' })
@@ -85,7 +91,6 @@ export class ResellerDataController {
   }
 
   @Put('update/:id')
-  @UseGuards(ResellerGuard)
   @ApiOperation({ summary: 'Update a data plan for resellers' })
   @ApiBody({ type: UpdataResellerDataDto })
   @ApiResponse({ status: 200, description: 'Data plan updated successfully' })

@@ -8,7 +8,6 @@ import { VtuTelegramBotService } from './telegram-bot/bot.service';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -57,6 +56,7 @@ async function bootstrap() {
     .addTag('user', 'User management endpoints')
     .addTag('notifications', 'Notification sending endpoints')
     .addTag('templates', 'Template management endpoints')
+    .addApiKey({ type: 'apiKey', name: 'x-api-key', in: 'header' }, 'x-api-key')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {

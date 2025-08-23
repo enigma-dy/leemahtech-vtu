@@ -24,17 +24,26 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
 
+    // Skip auth for API docs
     if (request.originalUrl.startsWith('/api-doc')) {
-      console.log('Skipping auth for API docs.');
       return true;
     }
 
+    // Skip auth if @Public
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (isPublic) return true;
 
+    // ✅ Skip JWT if this is a reseller route (ResellerGuard will handle it)
+    const isReseller = this.reflector.getAllAndOverride<boolean>('isReseller', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isReseller) return true;
+
+    // Normal JWT flow
     const token = this.extractTokenFromHeader(request);
     if (!token) throw new UnauthorizedException();
 
