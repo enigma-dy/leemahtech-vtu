@@ -19,11 +19,13 @@ import {
   ExamPinPurchaseDto,
 } from './dto/datastation.dto';
 import { Response, Request } from 'express';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('datastation')
 export class DataStationController {
   constructor(private readonly DataStationService: DataStationService) {}
 
+  @ApiOperation({ summary: 'Get current price of data (Leemah Tech)' })
   @Get('data-pricing')
   async getDataPricing() {
     try {
@@ -44,6 +46,7 @@ export class DataStationController {
     }
   }
 
+  @ApiOperation({ summary: 'All transaction in Datastation' })
   @Get('transaction')
   async getallDataTransaction() {
     try {

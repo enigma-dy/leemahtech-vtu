@@ -1,10 +1,12 @@
 import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { LeemahService } from './leemah.service';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('leemah')
 export class LeemahController {
   constructor(private readonly leemahService: LeemahService) {}
 
+  @ApiOperation({ summary: 'Get current price of data (Leemah Tech)' })
   @Get('data-pricing')
   async getDataPricing() {
     try {

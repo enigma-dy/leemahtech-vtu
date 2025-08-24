@@ -232,7 +232,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -255,7 +255,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmond API Error:', {
@@ -278,7 +278,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -301,7 +301,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -327,7 +327,7 @@ export class HusmodService {
           },
         ),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -350,7 +350,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -377,7 +377,7 @@ export class HusmodService {
           },
         ),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -400,7 +400,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -423,7 +423,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -450,7 +450,7 @@ export class HusmodService {
           },
         ),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {
@@ -473,7 +473,7 @@ export class HusmodService {
           },
         }),
       );
-      console.log('Response:', response.data);
+
       return response.data;
     } catch (error) {
       console.error('Husmod API Error:', {

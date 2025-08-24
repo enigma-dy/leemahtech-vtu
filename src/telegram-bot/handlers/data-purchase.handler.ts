@@ -94,7 +94,7 @@ export class DataPurchaseHandler {
   }
 
   private async onPlanSelected(ctx: BotContext) {
-    // ✅ FIX: Add a check to ensure ctx.match exists before using it.
+    //  FIX: Add a check to ensure ctx.match exists before using it.
     if (!ctx.match) return;
 
     const planId = ctx.match[1];

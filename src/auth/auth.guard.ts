@@ -36,7 +36,7 @@ export class AuthGuard implements CanActivate {
     ]);
     if (isPublic) return true;
 
-    // ✅ Skip JWT if this is a reseller route (ResellerGuard will handle it)
+    //  Skip JWT if this is a reseller route (ResellerGuard will handle it)
     const isReseller = this.reflector.getAllAndOverride<boolean>('isReseller', [
       context.getHandler(),
       context.getClass(),

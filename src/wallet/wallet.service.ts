@@ -51,13 +51,6 @@ export class WalletService implements OnModuleInit {
         },
       });
 
-      const platformLedger = await tx.ledger.create({
-        data: {
-          description: `Received ${amount} from user ${user.id} as liability`,
-          createdBy: 'SYSTEM',
-        },
-      });
-
       const platformLiabilityWallet = await tx.wallet.findFirst({
         where: { name: 'PLATFORM_LIABILITY_WALLET' },
       });
@@ -65,6 +58,20 @@ export class WalletService implements OnModuleInit {
       if (!platformLiabilityWallet) {
         throw new NotFoundException('Platform liability wallet not found');
       }
+
+      await tx.wallet.update({
+        where: { id: platformLiabilityWallet.id },
+        data: {
+          balance: { increment: amount },
+        },
+      });
+
+      const platformLedger = await tx.ledger.create({
+        data: {
+          description: `Received ${amount} from user ${user.id} as liability`,
+          createdBy: 'SYSTEM',
+        },
+      });
 
       await tx.entry.create({
         data: {
@@ -327,9 +334,7 @@ export class WalletService implements OnModuleInit {
     });
 
     if (existingWallets.length === walletNames.length) {
-      console.log(
-        '✅ Platform wallets already exist. Skipping initialization.',
-      );
+      console.log('Platform wallets already exist. Skipping initialization.');
       return;
     }
 
@@ -349,24 +354,20 @@ export class WalletService implements OnModuleInit {
       ),
     );
 
-    console.log(
-      `✅ Created missing platform wallets: ${missingWallets.join(', ')}`,
-    );
+    console.log(`Created missing llets: ${missingWallets.join(', ')}`);
   }
 
-  async getInflowOutflow(
+  async getDepositsAndUsage(
     currentUserId: string,
     timeframe: 'minute' | 'hour' | 'day' | 'month',
     startDate?: Date,
     endDate?: Date,
   ) {
-    // 1. Whitelist timeframe to enforce runtime safety
     const allowedTimeframes = ['minute', 'hour', 'day', 'month'] as const;
     if (!allowedTimeframes.includes(timeframe)) {
       throw new BadRequestException('Invalid timeframe');
     }
 
-    // 2. Verify admin before touching sensitive data
     const user = await this.prisma.user.findUnique({
       where: { id: currentUserId },
       select: { userRole: true },
@@ -374,105 +375,227 @@ export class WalletService implements OnModuleInit {
 
     if (!user || user.userRole !== Role.admin) {
       throw new ForbiddenException(
-        'Only admins can access inflow/outflow analytics',
+        'Only admins can access deposits and usage analytics',
       );
     }
 
-    // 3. Get platform wallet IDs
-    const platformWallets = await this.prisma.wallet.findMany({
-      where: {
-        name: { in: ['PLATFORM_REVENUE_WALLET', 'PLATFORM_PROFIT_WALLET'] },
-      },
+    const liabilityWallet = await this.prisma.wallet.findFirst({
+      where: { name: 'PLATFORM_LIABILITY_WALLET' },
       select: { id: true },
     });
 
-    const walletIds = platformWallets.map((wallet) => wallet.id);
-    if (walletIds.length === 0) {
+    if (!liabilityWallet) {
+      console.warn('Platform liability wallet not found');
       return [];
     }
 
-    // 4. Prebuild safe queries for each allowed timeframe
-    const queries: Record<typeof timeframe, any> = {
+    const defaultStartDate = startDate || new Date('2025-01-01T00:00:00Z');
+    const defaultEndDate = endDate || new Date();
+
+    const depositQueries: Record<typeof timeframe, any> = {
       minute: this.prisma.$queryRaw`
       SELECT
         date_trunc('minute', "createdAt") AS truncated_date,
-        type,
-        SUM(amount) AS total_amount
+        SUM(amount) AS total_deposits
       FROM "Entry"
-      WHERE "walletId" = ANY(${walletIds}::text[])
-        ${startDate ? Prisma.sql`AND "createdAt" >= ${startDate}` : Prisma.sql``}
-        ${endDate ? Prisma.sql`AND "createdAt" <= ${endDate}` : Prisma.sql``}
-      GROUP BY date_trunc('minute', "createdAt"), type
+      WHERE "walletId" = ${liabilityWallet.id}
+        AND type = 'CREDIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('minute', "createdAt")
       ORDER BY truncated_date ASC
     `,
       hour: this.prisma.$queryRaw`
       SELECT
         date_trunc('hour', "createdAt") AS truncated_date,
-        type,
-        SUM(amount) AS total_amount
+        SUM(amount) AS total_deposits
       FROM "Entry"
-      WHERE "walletId" = ANY(${walletIds}::text[])
-        ${startDate ? Prisma.sql`AND "createdAt" >= ${startDate}` : Prisma.sql``}
-        ${endDate ? Prisma.sql`AND "createdAt" <= ${endDate}` : Prisma.sql``}
-      GROUP BY date_trunc('hour', "createdAt"), type
+      WHERE "walletId" = ${liabilityWallet.id}
+        AND type = 'CREDIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('hour', "createdAt")
       ORDER BY truncated_date ASC
     `,
       day: this.prisma.$queryRaw`
       SELECT
         date_trunc('day', "createdAt") AS truncated_date,
-        type,
-        SUM(amount) AS total_amount
+        SUM(amount) AS total_deposits
       FROM "Entry"
-      WHERE "walletId" = ANY(${walletIds}::text[])
-        ${startDate ? Prisma.sql`AND "createdAt" >= ${startDate}` : Prisma.sql``}
-        ${endDate ? Prisma.sql`AND "createdAt" <= ${endDate}` : Prisma.sql``}
-      GROUP BY date_trunc('day', "createdAt"), type
+      WHERE "walletId" = ${liabilityWallet.id}
+        AND type = 'CREDIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('day', "createdAt")
       ORDER BY truncated_date ASC
     `,
       month: this.prisma.$queryRaw`
       SELECT
         date_trunc('month', "createdAt") AS truncated_date,
-        type,
-        SUM(amount) AS total_amount
+        SUM(amount) AS total_deposits
       FROM "Entry"
-      WHERE "walletId" = ANY(${walletIds}::text[])
-        ${startDate ? Prisma.sql`AND "createdAt" >= ${startDate}` : Prisma.sql``}
-        ${endDate ? Prisma.sql`AND "createdAt" <= ${endDate}` : Prisma.sql``}
-      GROUP BY date_trunc('month', "createdAt"), type
+      WHERE "walletId" = ${liabilityWallet.id}
+        AND type = 'CREDIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('month', "createdAt")
       ORDER BY truncated_date ASC
     `,
     };
 
-    // 5. Run the correct query for the selected timeframe
-    const result = (await queries[timeframe]) as Array<{
-      truncated_date: Date;
-      type: 'CREDIT' | 'DEBIT';
-      total_amount: Decimal;
-    }>;
+    // Query for usage (DEBIT entries for user wallets)
+    const usageQueries: Record<typeof timeframe, any> = {
+      minute: this.prisma.$queryRaw`
+      SELECT
+        date_trunc('minute', "createdAt") AS truncated_date,
+        SUM(amount) AS total_usage
+      FROM "Entry"
+      WHERE "walletId" IN (
+        SELECT "walletId" FROM "User"
+      )
+        AND type = 'DEBIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('minute', "createdAt")
+      ORDER BY truncated_date ASC
+    `,
+      hour: this.prisma.$queryRaw`
+      SELECT
+        date_trunc('hour', "createdAt") AS truncated_date,
+        SUM(amount) AS total_usage
+      FROM "Entry"
+      WHERE "walletId" IN (
+        SELECT "walletId" FROM "User"
+      )
+        AND type = 'DEBIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('hour', "createdAt")
+      ORDER BY truncated_date ASC
+    `,
+      day: this.prisma.$queryRaw`
+      SELECT
+        date_trunc('day', "createdAt") AS truncated_date,
+        SUM(amount) AS total_usage
+      FROM "Entry"
+      WHERE "walletId" IN (
+        SELECT "walletId" FROM "User"
+      )
+        AND type = 'DEBIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('day', "createdAt")
+      ORDER BY truncated_date ASC
+    `,
+      month: this.prisma.$queryRaw`
+      SELECT
+        date_trunc('month', "createdAt") AS truncated_date,
+        SUM(amount) AS total_usage
+      FROM "Entry"
+      WHERE "walletId" IN (
+        SELECT "walletId" FROM "User"
+      )
+        AND type = 'DEBIT'
+        AND "createdAt" >= ${defaultStartDate}
+        AND "createdAt" <= ${defaultEndDate}
+      GROUP BY date_trunc('month', "createdAt")
+      ORDER BY truncated_date ASC
+    `,
+    };
 
-    // 6. Format output with 0 defaults for missing inflow/outflow
-    const formattedResult = result.reduce(
+    const [depositResult, usageResult] = await Promise.all([
+      depositQueries[timeframe] as Promise<
+        Array<{ truncated_date: Date; total_deposits: Decimal }>
+      >,
+      usageQueries[timeframe] as Promise<
+        Array<{ truncated_date: Date; total_usage: Decimal }>
+      >,
+    ]);
+
+    const combinedResult = depositResult.reduce(
       (acc, curr) => {
         const dateKey = curr.truncated_date.toISOString();
         if (!acc[dateKey]) {
-          acc[dateKey] = { inflow: new Decimal(0), outflow: new Decimal(0) };
+          acc[dateKey] = {
+            total_deposits: new Decimal(0),
+            total_usage: new Decimal(0),
+          };
         }
-        if (curr.type === 'CREDIT') {
-          acc[dateKey].inflow = curr.total_amount || new Decimal(0);
-        } else {
-          acc[dateKey].outflow = curr.total_amount || new Decimal(0);
-        }
+        acc[dateKey].total_deposits = curr.total_deposits || new Decimal(0);
         return acc;
       },
-      {} as Record<string, { inflow: Decimal; outflow: Decimal }>,
+      {} as Record<string, { total_deposits: Decimal; total_usage: Decimal }>,
     );
 
-    return Object.entries(formattedResult).map(
-      ([date, { inflow, outflow }]) => ({
+    usageResult.forEach((curr) => {
+      const dateKey = curr.truncated_date.toISOString();
+      if (!combinedResult[dateKey]) {
+        combinedResult[dateKey] = {
+          total_deposits: new Decimal(0),
+          total_usage: new Decimal(0),
+        };
+      }
+      combinedResult[dateKey].total_usage = curr.total_usage || new Decimal(0);
+    });
+
+    const formattedOutput = Object.entries(combinedResult).map(
+      ([date, { total_deposits, total_usage }]) => ({
         date,
-        inflow: inflow.toNumber(),
-        outflow: outflow.toNumber(),
+        total_deposits: total_deposits.toNumber(),
+        total_usage: total_usage.toNumber(),
       }),
     );
+
+    console.log('Formatted deposits and usage output:', formattedOutput);
+    return formattedOutput;
+  }
+
+  async auditBalances(
+    currentUserId: string,
+  ): Promise<{ matches: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { userRole: true },
+    });
+
+    if (!user || user.userRole !== Role.admin) {
+      throw new ForbiddenException('Only admins can audit balances');
+    }
+
+    const totalUserBalances = await this.prisma.wallet.aggregate({
+      where: { User: { isNot: null } },
+      _sum: { balance: true },
+    });
+
+    const liabilityWallet = await this.prisma.wallet.findFirst({
+      where: { name: 'PLATFORM_LIABILITY_WALLET' },
+      select: { balance: true },
+    });
+
+    if (!liabilityWallet) {
+      throw new NotFoundException('Platform liability wallet not found');
+    }
+
+    const userBalanceSum = totalUserBalances._sum?.balance ?? new Decimal(0);
+    const liabilityBalance = liabilityWallet.balance;
+
+    if (userBalanceSum.equals(liabilityBalance)) {
+      console.log(' Balances match');
+      return {
+        matches: true,
+        message:
+          'Total user balances match the platform liability wallet balance',
+      };
+    } else {
+      console.error('Balance mismatch detected!');
+      console.error(`Total user balances: ${userBalanceSum.toString()}`);
+      console.error(
+        `Platform liability wallet balance: ${liabilityBalance.toString()}`,
+      );
+      return {
+        matches: false,
+        message: `Balance mismatch: Total user balances (${userBalanceSum.toString()}) do not match platform liability wallet balance (${liabilityBalance.toString()})`,
+      };
+    }
   }
 }

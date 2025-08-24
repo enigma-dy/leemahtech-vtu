@@ -60,4 +60,8 @@ export class UpdataDataDto {
   @ApiProperty({ description: 'Selling price, max 2 decimal places' })
   @IsNumber({ maxDecimalPlaces: 2 })
   selling_price: number;
+
+  @ApiProperty({ description: 'Selling price, max 2 decimal places' })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  reseller_price: number;
 }

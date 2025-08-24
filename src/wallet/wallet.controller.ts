@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
 
 import { WalletService } from './wallet.service';
@@ -58,23 +66,59 @@ export class WalletController {
 
   @Get('inflow-outflow')
   @ApiOperation({
-    summary: 'Get platform inflow/outflow analytics (admin only)',
+    summary: 'Get platform deposits and usage analytics (admin only)',
   })
   @ApiQuery({ name: 'timeframe', enum: ['minute', 'hour', 'day', 'month'] })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
-  async getInflowOutflow(
+  async accountingFlow(
     @Req() request: Request,
     @Query('timeframe') timeframe: 'minute' | 'hour' | 'day' | 'month',
-    @Query('startDate') startDate?: Date,
-    @Query('endDate') endDate?: Date,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     const { sub } = request['user'];
-    return await this.walletService.getInflowOutflow(
+    let startDateObj: Date | undefined;
+    let endDateObj: Date | undefined;
+
+    if (startDate) {
+      try {
+        const parsedStartDate = new Date(startDate);
+        if (isNaN(parsedStartDate.getTime())) {
+          throw new BadRequestException('Invalid startDate format');
+        }
+        startDateObj = new Date(parsedStartDate.getTime() - 3600000); // WAT to UTC
+      } catch (error) {
+        throw new BadRequestException('Invalid startDate format');
+      }
+    }
+
+    if (endDate) {
+      try {
+        const parsedEndDate = new Date(endDate);
+        if (isNaN(parsedEndDate.getTime())) {
+          throw new BadRequestException('Invalid endDate format');
+        }
+        endDateObj = new Date(parsedEndDate.getTime() - 3600000); // WAT to UTC
+      } catch (error) {
+        throw new BadRequestException('Invalid endDate format');
+      }
+    }
+
+    return await this.walletService.getDepositsAndUsage(
       sub,
       timeframe,
-      startDate,
-      endDate,
+      startDateObj,
+      endDateObj,
     );
+  }
+
+  @Get('Audit')
+  @ApiOperation({
+    summary: 'Get platform Audit (admin only)',
+  })
+  async audit(@Req() request: Request) {
+    const { sub } = request['user'];
+    return await this.walletService.auditBalances(sub);
   }
 }

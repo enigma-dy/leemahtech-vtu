@@ -11,21 +11,13 @@ import {
   Res,
 } from '@nestjs/common';
 import { HusmodService } from './husmod.service';
-
-import { Response, Request } from 'express';
-import {
-  AirTime2CastDto,
-  AirtimePurchaseDto,
-  CardPurchaseDto,
-  ElectricityPaymentDto,
-  ExamPinPurchaseDto,
-} from './dto/husmod.dto';
-import { DataStationDto } from '../datastation/dto/datastation.dto';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('husmod')
 export class HusmodController {
   constructor(private readonly HusmodService: HusmodService) {}
 
+  @ApiOperation({ summary: 'Get data price (Husmod)' })
   @Get('data-pricing')
   async getDataPricing() {
     try {
@@ -46,6 +38,7 @@ export class HusmodController {
     }
   }
 
+  @ApiOperation({ summary: 'All transaction in Husmod' })
   @Get('transaction')
   async getallDataTransaction() {
     try {

@@ -1,41 +1,32 @@
 import {
   BadRequestException,
-  Body,
-  HttpStatus,
   Injectable,
   NotFoundException,
-  Req,
-  Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/db/prisma.service';
-import { LeemahService } from 'src/providers/leemah/leemah.service';
-import { Prisma } from '@prisma/client';
-import { Response, Request } from 'express';
-import { CreateUnifiedPlanDto, DataDto, UpdataDataDto } from './dto/data.dto';
 import { HusmodService } from 'src/providers/husmod/husmod.service';
 import { DataStationService } from 'src/providers/datastation/datastation.service';
 import { ProviderService } from 'src/providers/provider.service';
-import { SmeProvider } from 'src/providers/dto/provider.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-
-import { DataStationDto } from 'src/providers/datastation/dto/datastation.dto';
-import { HusmodDataDto } from 'src/providers/husmod/dto/husmod.dto';
 import { DataPurchaseEvent } from 'src/email/events/mail.event';
-import { NotFoundError } from 'rxjs';
 import { Decimal } from '@prisma/client/runtime/library';
+import { CreateUnifiedPlanDto, DataDto, UpdataDataDto } from './dto/data.dto';
+import { SmeProvider } from 'src/providers/dto/provider.dto';
+import { AccountingService } from 'src/accounting/accounting.service';
 
 @Injectable()
 export class DataService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly leemahService: LeemahService,
     private readonly husmodService: HusmodService,
     private readonly dataStationService: DataStationService,
     private readonly activeProvider: ProviderService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly accountingService: AccountingService,
   ) {}
 
-  async getAllDataPlans() {
+  async getAllDataPlans(isReseller: boolean = false) {
     return this.prisma.unifiedPlan.findMany({
       select: {
         id: true,
@@ -43,7 +34,8 @@ export class DataService {
         data_plan_id: true,
         plan_size: true,
         plan_amount: true,
-        selling_price: true,
+        selling_price: !isReseller,
+        reseller_price: isReseller,
         network_name: true,
         network_id: true,
         plan_type: true,
@@ -51,7 +43,12 @@ export class DataService {
       },
     });
   }
-  async buyData(userId: string, data: DataDto): Promise<any> {
+
+  async buyData(
+    userId: string,
+    data: DataDto,
+    isReseller: boolean = false,
+  ): Promise<any> {
     return await this.prisma.$transaction(async (tx) => {
       const plan = await tx.unifiedPlan.findFirst({
         where: { id: data.id },
@@ -61,220 +58,54 @@ export class DataService {
         return { success: false, message: 'Data plan not found' };
       }
 
-      const user = await tx.user.findUnique({
-        where: { id: userId },
-        include: { wallet: true },
-      });
+      const price = isReseller ? plan.reseller_price : plan.selling_price;
+      const cost = plan.plan_amount;
+      const description = `Data purchase: ${plan.plan_size} on ${plan.network_name} for ${price}${isReseller ? ' using reseller endpoint' : ''}`;
 
-      if (!user || !user.wallet) {
-        throw new NotFoundException('User or wallet not found');
-      }
-
-      if (user.wallet.balance.lessThan(plan.selling_price)) {
-        throw new BadRequestException('Insufficient funds');
-      }
-
-      await tx.wallet.update({
-        where: { id: user.wallet.id },
-        data: { balance: { decrement: plan.selling_price } },
-      });
-
-      const userLedger = await tx.ledger.create({
-        data: {
-          description: `Data purchase: ${plan.plan_size} on ${plan.network_name} for ${plan.selling_price}`,
-          createdBy: user.id,
-        },
-      });
-
-      await tx.entry.create({
-        data: {
-          walletId: user.wallet.id,
-          ledgerId: userLedger.id,
-          amount: plan.selling_price,
-          type: 'DEBIT',
-        },
-      });
-
-      const platformLiabilityWallet = await tx.wallet.findFirst({
-        where: { name: 'PLATFORM_LIABILITY_WALLET' },
-      });
-
-      if (!platformLiabilityWallet) {
-        throw new NotFoundException('Platform liability wallet not found');
-      }
-
-      await tx.wallet.update({
-        where: { id: platformLiabilityWallet.id },
-        data: { balance: { decrement: plan.selling_price } },
-      });
-
-      const liabilityLedger = await tx.ledger.create({
-        data: {
-          description: `Liability reduced by ${plan.selling_price} for data purchase`,
-          createdBy: 'SYSTEM',
-        },
-      });
-
-      await tx.entry.create({
-        data: {
-          walletId: platformLiabilityWallet.id,
-          ledgerId: liabilityLedger.id,
-          amount: plan.selling_price,
-          type: 'DEBIT',
-        },
-      });
-
-      const revenueLedger = await tx.ledger.create({
-        data: {
-          description: `Revenue from data purchase: ${plan.selling_price} for plan ${plan.id}`,
-          createdBy: 'SYSTEM',
-        },
-      });
-
-      await tx.entry.create({
-        data: {
-          walletId: 'PLATFORM_REVENUE_WALLET',
-          ledgerId: revenueLedger.id,
-          amount: plan.selling_price,
-          type: 'CREDIT',
-        },
-      });
-
-      const profit = plan.selling_price.sub(plan.plan_amount);
-      const platformProfitWallet = await tx.wallet.findFirst({
-        where: { name: 'PLATFORM_PROFIT_WALLET' },
-      });
-
-      if (!platformProfitWallet) {
-        throw new NotFoundException('Platform profit wallet not found');
-      }
-
-      await tx.wallet.update({
-        where: { id: platformProfitWallet.id },
-        data: { balance: { increment: profit } },
-      });
-
-      const profitLedger = await tx.ledger.create({
-        data: {
-          description: `Profit from data purchase: ${profit} for plan ${plan.id}`,
-          createdBy: 'SYSTEM',
-        },
-      });
-
-      await tx.entry.create({
-        data: {
-          walletId: platformProfitWallet.id,
-          ledgerId: profitLedger.id,
-          amount: profit,
-          type: 'CREDIT',
-        },
-      });
-
-      // Record provider cost
-      await tx.entry.create({
-        data: {
-          walletId: platformProfitWallet.id,
-          ledgerId: profitLedger.id,
-          amount: plan.plan_amount,
-          type: 'DEBIT',
-        },
-      });
+      await this.accountingService.recordSale(
+        tx,
+        userId,
+        price,
+        cost,
+        description,
+      );
 
       // Call provider API
       let purchaseResult;
+      const providerData = {
+        network: plan.network_id.toString(),
+        mobile_number: data.mobileNumber,
+        plan: plan.data_plan_id,
+        planSize: plan.plan_size,
+        planVolume: plan.plan_size,
+        planName: plan.plan_type,
+        Ported_number: true,
+      };
+
       if (plan.provider === 'husmodata') {
         purchaseResult = await this.husmodService.buyData(
           userId,
-          {
-            network: plan.network_id.toString(),
-            mobile_number: data.mobileNumber,
-            plan: plan.data_plan_id,
-            planSize: plan.plan_size,
-            planVolume: plan.plan_size,
-            planName: plan.plan_type,
-            Ported_number: true,
-          },
-          plan.selling_price,
+          providerData,
+          price,
         );
       } else if (plan.provider === 'datastation') {
         purchaseResult = await this.dataStationService.buyData(
           userId,
-          {
-            network: plan.network_id.toString(),
-            mobile_number: data.mobileNumber,
-            plan: plan.data_plan_id,
-            planSize: plan.plan_size,
-            planVolume: plan.plan_size,
-            planName: plan.plan_type,
-            Ported_number: true,
-          },
-          plan.selling_price,
+          providerData,
+          price,
         );
       }
 
       // Handle failed purchase
       if (!purchaseResult?.success) {
-        // Refund user
-        await tx.wallet.update({
-          where: { id: user.wallet.id },
-          data: { balance: { increment: plan.selling_price } },
-        });
-
-        const refundLedger = await tx.ledger.create({
-          data: {
-            description: `Refund for failed data purchase: ${plan.plan_size}`,
-            createdBy: 'SYSTEM',
-          },
-        });
-
-        await tx.entry.create({
-          data: {
-            walletId: user.wallet.id,
-            ledgerId: refundLedger.id,
-            amount: plan.selling_price,
-            type: 'CREDIT',
-          },
-        });
-
-        // Reverse platform revenue
-        await tx.entry.create({
-          data: {
-            walletId: 'PLATFORM_REVENUE_WALLET',
-            ledgerId: refundLedger.id,
-            amount: plan.selling_price,
-            type: 'DEBIT',
-          },
-        });
-
-        // Reverse platform profit
-        await tx.wallet.update({
-          where: { id: platformProfitWallet.id },
-          data: { balance: { decrement: profit } },
-        });
-
-        await tx.entry.create({
-          data: {
-            walletId: platformProfitWallet.id,
-            ledgerId: refundLedger.id,
-            amount: profit,
-            type: 'DEBIT',
-          },
-        });
-
-        // Restore platform liability
-        await tx.wallet.update({
-          where: { id: platformLiabilityWallet.id },
-          data: { balance: { increment: plan.selling_price } },
-        });
-
-        await tx.entry.create({
-          data: {
-            walletId: platformLiabilityWallet.id,
-            ledgerId: refundLedger.id,
-            amount: plan.selling_price,
-            type: 'CREDIT',
-          },
-        });
+        const refundDescription = `Refund for failed data purchase: ${plan.plan_size}`;
+        await this.accountingService.recordRefund(
+          tx,
+          userId,
+          price,
+          cost,
+          refundDescription,
+        );
 
         return {
           success: false,
@@ -283,11 +114,20 @@ export class DataService {
       }
 
       // Record transaction
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        include: { wallet: true },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Email or password incorrect');
+      }
+
       const transaction = await tx.transaction.create({
         data: {
           txRef: purchaseResult.txRef || purchaseResult.transactionId,
           userId,
-          amount: plan.selling_price,
+          amount: price,
           currency: 'NGN',
           status: purchaseResult.success ? 'SUCCESS' : 'FAILED',
           provider: plan.provider,
@@ -307,7 +147,7 @@ export class DataService {
             plan.plan_type,
             plan.plan_size,
             data.mobileNumber,
-            plan.selling_price,
+            price,
             transaction.txRef,
           ),
         );
@@ -322,6 +162,7 @@ export class DataService {
       };
     });
   }
+
   async fetchAndStoreAllPlans(): Promise<{
     message: string;
     count: number;
@@ -343,13 +184,14 @@ export class DataService {
     ];
 
     allHusmodPlans.forEach((plan) => {
+      const planAmount = parseFloat(plan.plan_amount);
       unified.push({
         provider: SmeProvider.husmodata,
         data_plan_id: plan.dataplan_id,
         network_id: plan.network,
         network_name: plan.plan_network,
-        plan_amount: parseFloat(plan.plan_amount),
-        selling_price: parseFloat(plan.plan_amount),
+        plan_amount: planAmount,
+        selling_price: planAmount,
         plan_size: plan.plan,
         plan_type: plan.plan_type || '',
         validity: plan.month_validate?.replace(/---/g, '').trim() || '',
@@ -389,8 +231,8 @@ export class DataService {
           network_id: plan.network_id,
           network_name: plan.network_name,
           plan_amount: plan.plan_amount,
-          selling_price: plan.plan_amount,
-          reseller_price: plan.plan_amount,
+          selling_price: plan.selling_price,
+          reseller_price: plan.selling_price,
           plan_size: plan.plan_size,
           plan_type: plan.plan_type || '',
           validity: plan.validity || '',
@@ -414,14 +256,18 @@ export class DataService {
     };
   }
 
-  async updateDataPlan(data: UpdataDataDto) {
-    const { id, selling_price } = data;
+  async updateDataPlan(data: UpdataDataDto, isReseller: boolean = false) {
+    if (data.selling_price <= 0 || data.reseller_price <= 0) {
+      throw new BadRequestException(
+        `${isReseller ? 'Reseller' : 'Selling'} price must be positive`,
+      );
+    }
 
     const updated = await this.prisma.unifiedPlan.update({
       where: { id: data.id },
-      data: {
-        selling_price: new Decimal(selling_price),
-      },
+      data: isReseller
+        ? { reseller_price: new Decimal(data.selling_price) }
+        : { selling_price: new Decimal(data.reseller_price) },
     });
 
     return {

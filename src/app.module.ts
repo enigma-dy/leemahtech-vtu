@@ -24,6 +24,7 @@ import { AuthGuard } from './auth/auth.guard';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ResellerModule } from './reseller/reseller.module';
+import { AccountingModule } from './accounting/accounting.modult';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ResellerModule } from './reseller/reseller.module';
     SmeProviderModule,
     OpayModule,
     ResellerModule,
+    AccountingModule,
     // VtuTelegramBotModule,
     EventEmitterModule.forRoot(),
     AdminModule,

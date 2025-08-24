@@ -187,6 +187,7 @@ export class UserController {
     return this.userService.resetPassword(token, newPassword, passwordConfirm);
   }
 
+  @ApiOperation({ summary: 'Activate account' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({
     status: 404,

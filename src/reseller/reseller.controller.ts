@@ -90,38 +90,38 @@ export class ResellerDataController {
     }
   }
 
-  @Put('update/:id')
-  @ApiOperation({ summary: 'Update a data plan for resellers' })
-  @ApiBody({ type: UpdataResellerDataDto })
-  @ApiResponse({ status: 200, description: 'Data plan updated successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid request or failed update' })
-  @ApiResponse({ status: 401, description: 'Invalid or missing API key' })
-  @ApiResponse({
-    status: 403,
-    description: 'User is not an active or verified reseller',
-  })
-  async updateDataPlan(
-    @CurrentUser() user: any,
-    @Param('id') id: string,
-    @Body() data: UpdataResellerDataDto,
-  ) {
-    try {
-      const response = await this.resellerDataService.updateDataPlan(data);
-      return { status: 'success', data: response };
-    } catch (error) {
-      const statusCode =
-        error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
-      throw new HttpException(
-        {
-          status: 'error',
-          message:
-            error?.response?.data?.message ||
-            error.message ||
-            'Failed to update data plan',
-          error: { statusCode, details: error?.response?.data || null },
-        },
-        statusCode,
-      );
-    }
-  }
+  // @Put('update/:id')
+  // @ApiOperation({ summary: 'Update a data plan for resellers' })
+  // @ApiBody({ type: UpdataResellerDataDto })
+  // @ApiResponse({ status: 200, description: 'Data plan updated successfully' })
+  // @ApiResponse({ status: 400, description: 'Invalid request or failed update' })
+  // @ApiResponse({ status: 401, description: 'Invalid or missing API key' })
+  // @ApiResponse({
+  //   status: 403,
+  //   description: 'User is not an active or verified reseller',
+  // })
+  // async updateDataPlan(
+  //   @CurrentUser() user: any,
+  //   @Param('id') id: string,
+  //   @Body() data: UpdataResellerDataDto,
+  // ) {
+  //   try {
+  //     const response = await this.resellerDataService.updateDataPlan(data);
+  //     return { status: 'success', data: response };
+  //   } catch (error) {
+  //     const statusCode =
+  //       error?.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
+  //     throw new HttpException(
+  //       {
+  //         status: 'error',
+  //         message:
+  //           error?.response?.data?.message ||
+  //           error.message ||
+  //           'Failed to update data plan',
+  //         error: { statusCode, details: error?.response?.data || null },
+  //       },
+  //       statusCode,
+  //     );
+  //   }
+  // }
 }

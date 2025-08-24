@@ -12,6 +12,7 @@ import { UserService } from 'src/user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { OpayEvent } from 'src/email/events/mail.event';
 import { Decimal } from '@prisma/client/runtime/library';
+import { ApiExcludeEndpoint, ApiOperation } from '@nestjs/swagger';
 
 @Controller('opay')
 export class OpayController {
@@ -24,6 +25,7 @@ export class OpayController {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  @ApiOperation({ summary: 'Credit wallet' })
   @Post('credit')
   async creditAccount(@Body() data: WalletDto, @Req() request: Request) {
     const { sub } = request['user'];
@@ -82,6 +84,7 @@ export class OpayController {
     return await this.opayService.createPayment(opayPayload);
   }
 
+  @ApiExcludeEndpoint()
   @Public()
   @Post('status')
   async checkPaymentStatus(@Body() payload) {

@@ -43,6 +43,7 @@ export class AdminService implements OnModuleInit {
         password: hashedPassword,
         userRole: 'admin',
         walletId: wallet.id,
+        isEmailVerified: true,
       },
     });
 
@@ -77,9 +78,6 @@ export class AdminService implements OnModuleInit {
     return wallet;
   }
 
-  // -----------------------
-  // Admin Methods
-  // -----------------------
   async ensureSingleAdmin() {
     const admins = await this.prisma.user.findMany({
       where: { userRole: 'admin' },
@@ -190,16 +188,13 @@ export class AdminService implements OnModuleInit {
 
       if (deleteWallet && admin.wallet?.name === 'Admin Wallet') {
         await tx.wallet.delete({ where: { id: admin.wallet.id } });
-        console.log('✅ Admin Wallet deleted.');
+        console.log(' Admin Wallet deleted.');
       }
     });
 
     return { message: 'Admin deleted successfully' };
   }
 
-  // -----------------------
-  // Helper
-  // -----------------------
   private formatAdmin(admin: any) {
     return {
       id: admin.id,
