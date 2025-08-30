@@ -16,7 +16,14 @@ import { EmailService } from './mail.service';
           'SMTP_HOST',
           'email-smtp.eu-north-1.amazonaws.com',
         );
+
         const port = Number(configService.get<number>('SMTP_PORT', 587));
+        const user = configService.get<string>('SMTP_USER');
+        const pass = configService.get<string>('SMTP_PASS');
+        const from = configService.get<string>(
+          'MAIL_FROM',
+          'no-reply@myco.com.ng',
+        );
 
         return {
           transport: {
@@ -24,8 +31,8 @@ import { EmailService } from './mail.service';
             port,
             secure: port === 465,
             auth: {
-              user: configService.get<string>('SMTP_USER'),
-              pass: configService.get<string>('SMTP_PASS'),
+              user,
+              pass,
             },
           },
           defaults: {
