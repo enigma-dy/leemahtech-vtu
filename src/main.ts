@@ -12,8 +12,8 @@ async function bootstrap() {
 
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // const botService = app.get(VtuTelegramBotService);
-  // botService.appRef = app;
+  const botService = app.get(VtuTelegramBotService);
+  botService.appRef = app;
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -70,10 +70,6 @@ async function bootstrap() {
     apiReference({
       content: document,
       theme: 'purple',
-      spec: {
-        title: 'Leemah API Reference',
-        description: 'API documentation for the VTU platform',
-      },
     }),
   );
 

@@ -49,7 +49,7 @@ import { AccountingModule } from './accounting/accounting.modult';
     OpayModule,
     ResellerModule,
     AccountingModule,
-    // VtuTelegramBotModule,
+    VtuTelegramBotModule,
     EventEmitterModule.forRoot(),
     AdminModule,
     ThrottlerModule.forRoot([

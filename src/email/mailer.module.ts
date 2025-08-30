@@ -5,27 +5,31 @@ import { join } from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserCreatedListener } from './listerner/mail.listerner';
 import { EmailService } from './mail.service';
+
 @Module({
   imports: [
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const host = configService.get<string>('SMTP_HOST');
-        const port = Number(configService.get<number>('SMTP_PORT'));
+        const host = configService.get<string>(
+          'SMTP_HOST',
+          'email-smtp.eu-north-1.amazonaws.com',
+        );
+        const port = Number(configService.get<number>('SMTP_PORT', 587));
 
         return {
           transport: {
-            host: configService.get<string>('SMTP_HOST'),
-            port: port,
-            secure: false,
-            ignoreTLS: true,
-            tls: {
-              rejectUnauthorized: false,
+            host,
+            port,
+            secure: port === 465,
+            auth: {
+              user: configService.get<string>('SMTP_USER'),
+              pass: configService.get<string>('SMTP_PASS'),
             },
           },
           defaults: {
-            from: `"No Reply" <${configService.get<string>('MAIL_FROM', 'noreply@leemah.com')}>`,
+            from: `"No Reply" <${configService.get<string>('MAIL_FROM', 'no-reply@myco.com.ng')}>`,
           },
           template: {
             dir: join(__dirname, 'templates'),

@@ -5,6 +5,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
@@ -269,18 +270,25 @@ export class UserService {
   }
 
   async requestPasswordReset(email: string) {
-    const user = await this.prisma.user.findFirst({
+    const user = await this.prisma.user.findUnique({
+      // Use findUnique for clarity
       where: { email },
     });
 
+    // BEST PRACTICE: Don't reveal if a user exists.
+    // This prevents "email enumeration" attacks.
     if (!user) {
-      throw new NotFoundException('User with this email does not exist');
+      console.warn(`Password reset requested for non-existent email: ${email}`);
+      // Silently exit but return a generic success message.
+      return {
+        message:
+          'If an account with that email exists, a password reset link has been sent.',
+      };
     }
 
     const token = uuidv4();
-    const expiresAt = new Date(Date.now() + 3600 * 1000);
+    const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour expiry
 
-    console.log(token);
     await this.prisma.passwordResetToken.create({
       data: {
         token,
@@ -294,7 +302,10 @@ export class UserService {
       new EmailEvent(user.email!, user.fullName!, { resetToken: token }),
     );
 
-    return { message: 'Password reset link sent to your email' };
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
 
   async resetPassword(
@@ -306,29 +317,32 @@ export class UserService {
       throw new BadRequestException('Passwords do not match');
     }
 
-    const resetToken = await this.prisma.passwordResetToken.findFirst({
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
       where: {
         token,
-        expiresAt: { gt: new Date() },
       },
       include: { user: true },
     });
 
-    if (!resetToken) {
-      throw new NotFoundException('Invalid or expired reset token');
+    if (!resetToken || new Date() > resetToken.expiresAt) {
+      throw new UnauthorizedException(
+        'Invalid or expired password reset token',
+      );
     }
 
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const hashedPassword = await bcrypt.hash(newPassword, 10); // Simplified hashing
 
     await this.prisma.$transaction(async (prisma) => {
       await prisma.user.update({
         where: { id: resetToken.userId },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          isMigrated: true,
+        },
       });
 
-      await prisma.passwordResetToken.deleteMany({
-        where: { userId: resetToken.userId },
+      await prisma.passwordResetToken.delete({
+        where: { id: resetToken.id },
       });
     });
 
@@ -337,7 +351,7 @@ export class UserService {
       new EmailEvent(resetToken.user.email!, resetToken.user.fullName!),
     );
 
-    return { message: 'Password reset successfully' };
+    return { message: 'Password reset successfully. You can now log in.' };
   }
 
   async verifyEmail(token: string) {

@@ -35,7 +35,7 @@ export class VtuTelegramBotService implements OnModuleInit, OnModuleDestroy {
     const agent = new https.Agent({ keepAlive: true });
     this.bot = new Telegraf<BotContext>(token, { telegram: { agent } });
 
-    // Scenes
+
     const buyDataScene = this.dataPurchaseHandler.getScene();
     const stage = new Scenes.Stage<BotContext>([buyDataScene], {});
     this.bot.use(session());
