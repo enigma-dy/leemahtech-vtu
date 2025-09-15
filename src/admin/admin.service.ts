@@ -14,70 +14,69 @@ export class AdminService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    const adminEmail = process.env.ADMIN_EMAIL!;
-    const adminPassword = process.env.ADMIN_PASSWORD!;
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL!;
+      const adminPassword = process.env.ADMIN_PASSWORD!;
 
-    if (!adminEmail || !adminPassword) {
-      throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in env');
+      if (!adminEmail || !adminPassword) {
+        throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in env');
+      }
+
+      const existingAdmin = await this.prisma.user.findUnique({
+        where: { email: adminEmail },
+      });
+
+      if (existingAdmin) {
+        console.log('Admin user already exists. Skipping initialization.');
+        return;
+      }
+
+      console.log('Admin user not found. Initializing new admin...');
+
+      const wallet = await this.findOrCreateAdminWallet();
+
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id: uuidv4(),
+            fullName: 'System Admin',
+            email: adminEmail,
+            password: hashedPassword,
+            userRole: 'admin',
+            walletId: wallet.id,
+            isEmailVerified: true,
+          },
+        });
+      });
+
+      console.log(`✅ Admin user created successfully: ${adminEmail}`);
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR during admin initialization:', error);
     }
-
-    const existingAdmin = await this.prisma.user.findFirst({
-      where: { email: adminEmail, userRole: 'admin' },
-      include: { wallet: true },
-    });
-
-    if (existingAdmin) {
-      console.log('Admin already exists. Skipping initialization.');
-      return;
-    }
-
-    let wallet = await this.findOrCreateAdminWallet();
-
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-
-    await this.prisma.user.create({
-      data: {
-        id: uuidv4(),
-        fullName: 'System Admin',
-        email: adminEmail,
-        password: hashedPassword,
-        userRole: 'admin',
-        walletId: wallet.id,
-        isEmailVerified: true,
-      },
-    });
-
-    console.log(` Admin user created: ${adminEmail}`);
   }
 
-  async findOrCreateAdminWallet() {
-    let wallet = await this.prisma.wallet.findFirst({
-      where: { name: 'Admin Wallet', User: null },
+  private async findOrCreateAdminWallet() {
+    const walletName = 'Admin Wallet';
+
+    let wallet = await this.prisma.wallet.findUnique({
+      where: { name: walletName },
     });
 
     if (!wallet) {
-      const assignedWallet = await this.prisma.wallet.findUnique({
-        where: { name: 'Admin Wallet' },
-        include: { User: true },
-      });
-
-      if (assignedWallet) {
-        throw new BadRequestException(
-          `Wallet named 'Admin Wallet' is already assigned to user with ID ${assignedWallet.User?.id}`,
-        );
-      }
-
+      console.log(`'${walletName}' not found. Creating it now.`);
       wallet = await this.prisma.wallet.create({
-        data: { id: uuidv4(), name: 'Admin Wallet', balance: 0 },
+        data: {
+          id: uuidv4(),
+          name: walletName,
+          balance: 0,
+        },
       });
-      console.log(' Created new Admin Wallet.');
-    } else {
-      console.log('Reusing existing unassigned Admin Wallet.');
     }
 
     return wallet;
   }
-
   async ensureSingleAdmin() {
     const admins = await this.prisma.user.findMany({
       where: { userRole: 'admin' },

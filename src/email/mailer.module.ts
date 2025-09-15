@@ -1,55 +1,40 @@
 import { Module } from '@nestjs/common';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { EjsAdapter } from '@nestjs-modules/mailer/dist/adapters/ejs.adapter';
-import { join } from 'path';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UserCreatedListener } from './listerner/mail.listerner';
+import { SESClient } from '@aws-sdk/client-ses';
 import { EmailService } from './mail.service';
+import { UserCreatedListener } from './listerner/mail.listerner';
 
 @Module({
-  imports: [
-    MailerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => {
-        const host = configService.get<string>(
-          'SMTP_HOST',
-          'email-smtp.eu-north-1.amazonaws.com',
+  imports: [ConfigModule],
+  providers: [
+    EmailService,
+    UserCreatedListener,
+    {
+      provide: 'SES_CLIENT',
+      useFactory: (configService: ConfigService) => {
+        const region = configService.get<string>('AWS_REGION', 'eu-north-1');
+        const accessKeyId = configService.get<string>('AWS_ACCESS_KEY_ID');
+        const secretAccessKey = configService.get<string>(
+          'AWS_SECRET_ACCESS_KEY',
         );
 
-        const port = Number(configService.get<number>('SMTP_PORT', 587));
-        const user = configService.get<string>('SMTP_USER');
-        const pass = configService.get<string>('SMTP_PASS');
-        const from = configService.get<string>(
-          'MAIL_FROM',
-          'no-reply@myco.com.ng',
-        );
+        if (!accessKeyId || !secretAccessKey) {
+          throw new Error(
+            'AWS credentials (AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY) are missing',
+          );
+        }
 
-        return {
-          transport: {
-            host,
-            port,
-            secure: port === 465,
-            auth: {
-              user,
-              pass,
-            },
+        return new SESClient({
+          region,
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
           },
-          defaults: {
-            from: `"No Reply" <${configService.get<string>('MAIL_FROM', 'no-reply@myco.com.ng')}>`,
-          },
-          template: {
-            dir: join(__dirname, 'templates'),
-            adapter: new EjsAdapter(),
-            options: {
-              strict: false,
-            },
-          },
-        };
+        });
       },
-    }),
+      inject: [ConfigService],
+    },
   ],
-  providers: [EmailService, UserCreatedListener],
   exports: [EmailService],
 })
 export class EmailModule {}
