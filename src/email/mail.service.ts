@@ -38,24 +38,19 @@ export class EmailService {
       'MAIL_FROM',
       'no-reply@myco.com.ng',
     );
+    const configurationSet = this.configService.get<string>(
+      'SES_CONFIG_SET',
+      'default-config',
+    );
 
     const params = {
       Source: `"No Reply" <${from}>`,
-      Destination: {
-        ToAddresses: [to],
-      },
+      Destination: { ToAddresses: [to] },
       Message: {
-        Subject: {
-          Data: subject,
-          Charset: 'UTF-8',
-        },
-        Body: {
-          Html: {
-            Data: html,
-            Charset: 'UTF-8',
-          },
-        },
+        Subject: { Data: subject, Charset: 'UTF-8' },
+        Body: { Html: { Data: html, Charset: 'UTF-8' } },
       },
+      ConfigurationSetName: configurationSet,
     };
 
     try {

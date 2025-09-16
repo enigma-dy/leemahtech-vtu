@@ -72,7 +72,6 @@ async function bootstrap() {
       theme: 'purple',
     }),
   );
-
   await app.listen(process.env.PORT ?? 5000, '0.0.0.0');
 }
 bootstrap();
